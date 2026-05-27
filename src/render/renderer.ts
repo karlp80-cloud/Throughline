@@ -19,7 +19,7 @@ import type {
   Solution,
   WorldState,
 } from '../engine/types';
-import { FACING_ARROW, GLYPHS, type GlyphKey } from './glyphs';
+import { GLYPHS, type GlyphKey } from './glyphs';
 import { paletteColor } from './palette';
 
 /** Pixel size of one grid cell. Constant for Phase 2. */
@@ -28,7 +28,6 @@ export const CELL_SIZE = 48;
 // Precomputed Path2D per glyph, lazily built on first render in a
 // browser/jsdom context (Path2D isn't available in plain Node).
 let glyphPaths: Map<GlyphKey, Path2D> | null = null;
-let facingArrowPath: Path2D | null = null;
 
 function ensureGlyphPaths(): void {
   if (glyphPaths !== null) return;
@@ -36,7 +35,6 @@ function ensureGlyphPaths(): void {
   for (const [key, d] of Object.entries(GLYPHS) as [GlyphKey, string][]) {
     glyphPaths.set(key, new Path2D(d));
   }
-  facingArrowPath = new Path2D(FACING_ARROW);
 }
 
 export function canvasSizeFor(puzzle: Puzzle): { width: number; height: number } {
@@ -174,9 +172,19 @@ function tileKindToGlyph(kind: PlacedTile['kind']): GlyphKey {
   }
 }
 
+/**
+ * Tiles whose base glyph is rotation-symmetric (no inherent visual
+ * facing). The renderer overlays a `facing_arrow` glyph for these so
+ * the player can tell which way they point.
+ */
+const ROTATION_SYMMETRIC_TILES = new Set<PlacedTile['kind']>(['filter', 'reactor']);
+
 function drawTiles(ctx: CanvasRenderingContext2D, tiles: readonly PlacedTile[]): void {
   for (const tile of tiles) {
     drawGlyphAt(ctx, tileKindToGlyph(tile.kind), tile.pos, paletteColor('fg'), tile.facing);
+    if (ROTATION_SYMMETRIC_TILES.has(tile.kind)) {
+      drawGlyphAt(ctx, 'facing_arrow', tile.pos, paletteColor('accent'), tile.facing);
+    }
   }
 }
 
@@ -321,9 +329,6 @@ export function render(
   drawCargo(ctx, world, puzzle);
   drawAgents(ctx, world);
   if (opts.preview) drawPreviewTile(ctx, opts.preview, puzzle, solution);
-  // facingArrowPath is reserved for a future facing overlay; reference
-  // it so eslint doesn't complain about an unused-vars warning.
-  void facingArrowPath;
 }
 
 function drawPreviewTile(
@@ -351,4 +356,7 @@ function drawPreviewTile(
     preview.facing,
     0.35,
   );
+  if (ROTATION_SYMMETRIC_TILES.has(preview.tileKind)) {
+    drawGlyphAt(ctx, 'facing_arrow', pos, paletteColor('accent'), preview.facing, 0.35);
+  }
 }
