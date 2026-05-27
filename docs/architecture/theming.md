@@ -46,14 +46,13 @@ export const GLYPH_FAMILIES: readonly GlyphFamily[];
 export const DEFAULT_FAMILY_ID = 'default' as const;
 ```
 
-Phase 8 ships ~50 glyph variants across 5 families:
-- `default` — the minimal set already in `glyphs/index.ts` (current shapes); always complete (covers every key).
-- `alchemy` — alembic, phial, homunculus, leyline, etc.
-- `forensics` — evidence locker, suspect node, case file, etc.
-- `scifi` — reactor inlet, fusion vessel, drone, etc.
-- `mythic` — rune circle, sigil, oracle, etc.
+Phase 8 ships **33 glyph variants across 4 families** (default + 3 themed):
+- `default` — the minimal set already in `glyphs/index.ts`; canonical and complete (9 keys including `facing_arrow`).
+- `alchemy` — alembic, phial, homunculus, leyline, etc. (8 keys)
+- `forensics` — evidence locker, case file, magnifying glass, etc. (8 keys)
+- `scifi` — reactor inlet, fusion vessel, drone, etc. (8 keys)
 
-The `default` family is **canonical and complete**. Other families may be partial; missing keys fall back to `default`.
+Phase 9+ adds `mythic` / `modernist` / etc. as content work. Themes referencing unknown families fall back per-key with a warning — never crash. The `default` family is canonical and complete; everything else may be partial.
 
 Theme block's `glyphs: Record<glyph_key, variant_name>` references variant_names by family-qualified id, e.g. `"input": "alchemy.alembic"`. If the variant doesn't resolve, fall back to default-family for that key and emit a warning.
 

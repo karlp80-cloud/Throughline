@@ -13,15 +13,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phases 0–7 complete.** Origin: https://github.com/karlp80-cloud/Throughline.
+**Phases 0–8 complete.** Origin: https://github.com/karlp80-cloud/Throughline.
 
-Phase 7 added `src/schema/` (the canonical Zod schema for `campaign.json` — shared with Phase 10's CLI), `src/campaign/` (hash + storage + saves + state machine + DOM screens), and the built-in two-act demo at `campaigns/two-act.json`. Moderate cycle: architect memo at [docs/architecture/campaign-state.md](docs/architecture/campaign-state.md), TDD coder, fresh-context reviewer subagent signed off all seven checklist items (migration harness exercised, future-version refused, hash-mismatch warn+reset, corrupted JSON doesn't brick, narrative via `textContent`, schema `.strict()` + capped, DSL parse at load time).
+Phase 8 added `src/theme/` (palette injection + WCAG AA contrast floor + glyph variant resolution + `{{token}}` vocab substitution with HTML escape + audio progression routing) and 4 glyph families (default + alchemy + forensics + scifi, 33 variants). Moderate cycle: architect memo at [docs/architecture/theming.md](docs/architecture/theming.md), TDD coder, fresh-context reviewer subagent signed off all seven checklist items (token-leak sweep verified by canary, contrast fallback to `DEFAULT_PALETTE` on AA failure, HTML escape blocks `<script>` injection, no `innerHTML` in theme/glyphs source, glyph path-data is ASCII-only SVG, palette injection uses CSS API not string concat, `families.json` matches `library.ts`). Built-in demo at `campaigns/alchemy-demo.json` exercises the full pipeline.
 
-Default route (`/`) now mounts the campaign harness: main menu → act intro → hub → puzzle → act outro → ending. Soft-resume: re-selecting a partly-completed campaign jumps to the first incomplete act's intro.
+**Tally:** 368 unit (135 engine + 5 palette + 35 editor + 22 animator + 71 DSL + 9 detector + 10 audio + 46 campaign + 34 theme + 1 smoke) + 14 e2e (smoke + 4 renderer screenshots + 1 editor + 2 playback + 1 completion + 1 campaign + 4 theme). Tsc + lint clean. CI green at each push.
 
-**Tally:** 334 unit (135 engine + 5 palette + 35 editor + 22 animator + 71 DSL + 9 detector + 10 audio + 46 campaign + 1 smoke) + 10 e2e (smoke + 4 renderer screenshots + 1 editor + 2 playback + 1 completion + 1 campaign). Tsc + lint clean. CI green at each push.
-
-**Next:** Phase 8 — Theme Applicator. **Moderate cycle** — apply `campaign.theme` at runtime: palette → CSS variables, glyph variants from a fixed library, vocabulary substitution. Reviewer focuses on no-un-substituted-tokens + WCAG contrast floor + HTML escape.
+**Next:** Phase 9 — Hardcoded Tutorial Campaign (*The Apprentice's Manual*). **Content-focused cycle** — 6 puzzles, one mechanic per puzzle, generic vocabulary (no themed words) so the tutorial gels with any later procgen theme. Reviewer is 2-3 playtesters, not a code reviewer.
 
 When a phase completes, update this section to point at the next phase.
 
