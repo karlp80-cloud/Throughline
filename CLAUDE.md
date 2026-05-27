@@ -13,15 +13,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phases 0–4 complete and playtest-approved.** Origin: https://github.com/karlp80-cloud/Throughline. Default route (`/`) mounts the editor with a small solvable puzzle; the top-level **▶ Run** swaps to playback (canvas + Play/Pause/Step/Reset/speed-selector); Reset returns to the editor with the draft preserved.
+**Phases 0–5 complete.** Origin: https://github.com/karlp80-cloud/Throughline.
 
-Phase 4 details: pure animator state machine consuming the engine's `CycleTrace[]`; speeds ×0.5/×1/×2/×4 with base 600ms/cycle. **Inter-cycle interpolation** (added during playtest): cargo and agents lerp cell-to-cell at ~60Hz; emitted cargo slides from its input cell (using `EmissionEvent.inputPos`); delivered cargo slides into its output cell and fades out there (using `DeliveryEvent.outputPos`). Reactor-consumed/produced cargo fades in place. Memo at [docs/architecture/playback.md](docs/architecture/playback.md).
+Phase 5 added the rule DSL (`src/dsl/`) + completion detector (`src/completion/`) + post-victory results panel. Full cycle: architect memo at [docs/architecture/rule-dsl.md](docs/architecture/rule-dsl.md), TDD coder, fresh-context reviewer subagent signed off all five checklist items (fuzz coverage real, every AST kind tested, no-eval canary catches `eval`/`Function`, no innerHTML in DSL/completion DOM, closed identifier set enforced at parse time).
 
-Two playtest-driven editor fixes after Phase 4: tile placement now allowed on input/output cells (engine supports it; the editor was over-strict), and Reset preserves the editor's draft so the player can `Run → watch → Reset → edit → Run` without losing tiles.
+Grammar choices locked: non-associative cmpExpr, integer division (div-by-zero → eval error), case-sensitive identifiers from `{cycles, tiles_used, agent_count, ops_total}`, unary `-` in the grammar, fail-closed boundary for eval errors and non-boolean roots.
 
-**Tally:** 198 unit tests (135 engine + 5 palette + 35 editor + 22 animator + 1 smoke) + 8 e2e (smoke + 4 renderer screenshots + 1 editor + 2 playback). Tsc + lint clean. CI green at each push.
+**Tally:** 278 unit tests (135 engine + 5 palette + 35 editor + 22 animator + 71 DSL + 9 detector + 1 smoke) + 9 e2e (smoke + 4 renderer screenshots + 1 editor + 2 playback + 1 completion). Tsc + lint clean. CI green at each push.
 
-**Next:** Phase 5 — Win/Loss + Optional Challenges. **Full cycle** (Architect → Coder → Reviewer with the verbatim rule-DSL "no eval, no Function()" checklist).
+**Next:** Phase 6 — Audio. Light cycle (Tone.js loops + Web Audio SFX; manual listening review).
 
 When a phase completes, update this section to point at the next phase.
 
