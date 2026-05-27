@@ -24,3 +24,6 @@ Thumbs.db
 
 # Tauri (will be populated in Phase 11+)
 src-tauri/target/
+
+# Local Claude Code state
+.claude/settings.local.json

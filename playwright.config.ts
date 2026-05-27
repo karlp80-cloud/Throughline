@@ -14,6 +14,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
+  // OS-agnostic snapshot baselines. Canvas 2D primitive draws don't
+  // depend on fonts, so cross-OS aliasing differences are minor and
+  // absorbed by the per-test `maxDiffPixelRatio` tolerance.
+  snapshotPathTemplate: '{testDir}/{testFileName}-snapshots/{arg}{ext}',
   // Serialize on CI to avoid resource contention; let Playwright pick the
   // worker count locally. Conditional spread keeps `exactOptionalPropertyTypes`
   // happy — the `workers` key is simply absent when not on CI.
