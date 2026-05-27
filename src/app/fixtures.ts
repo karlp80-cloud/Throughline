@@ -35,6 +35,26 @@ export interface RenderFixture {
 }
 
 export const FIXTURES: Readonly<Record<string, RenderFixture>> = {
+  // 0. Editor default: a small puzzle that actually solves, so the
+  // Run button produces a satisfying playthrough within a few cycles.
+  // Used by `main.ts` for the default editor view and by playback e2e.
+  editorDefault: {
+    name: 'editor default — solvable',
+    puzzle: makePuzzle({
+      id: 'editorDefault',
+      grid: { w: 5, h: 3 },
+      inputs: [{ pos: [0, 1], emits: ['alpha'], rate: 1 }],
+      outputs: [{ pos: [4, 1], required: [{ type: 'alpha', count: 3 }] }],
+      agents: [{ id: 'a1', startPos: [2, 0] }],
+      constraints: { maxTiles: 8, maxCycles: 30 },
+    }),
+    solution: makeSolution(
+      [conveyor([0, 1], 'E'), conveyor([1, 1], 'E'), conveyor([2, 1], 'E'), conveyor([3, 1], 'E')],
+      { a1: [[2, 0]] },
+      { a1: [{ kind: 'WAIT' }] },
+    ),
+    cycleIndex: 0,
+  },
   // 1. Empty 4x3 grid, no inputs/outputs/agents/tiles. Just background + grid.
   empty: {
     name: 'empty 4x3 grid',

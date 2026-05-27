@@ -1,18 +1,22 @@
 /**
  * Throughline — entry point.
  *
- * Routes by query string:
- *   ?editor=1                      → Phase 3 editor with a default puzzle
- *   ?fixture=NAME                  → Phase 2 static render of a named fixture
- *   (no params)                    → defaults to fixture=fullPreRun
+ * Default route (`/`) mounts the editor and a top-level "Run" button
+ * that swaps the view to playback. `?fixture=NAME` shows a static
+ * Phase-2 render used by screenshot diff tests.
+ *
+ * Editor handle is published on `window.__editor`; playback handle on
+ * `window.__playback`. The two are mutually exclusive at any time.
  */
 import { mountCanvasFromQueryString } from './app/canvasMount';
 import { FIXTURES } from './app/fixtures';
 import { mountEditor, type EditorHandle } from './editor';
+import { mountPlayback, type PlaybackHandle } from './playback';
 
 declare global {
   interface Window {
     __editor?: EditorHandle;
+    __playback?: PlaybackHandle;
   }
 }
 
@@ -25,8 +29,6 @@ if (app) {
   app.appendChild(h);
 
   const params = new URLSearchParams(window.location.search);
-  // Default route is the editor. `?fixture=NAME` switches to the static
-  // renderer used by Phase 2's screenshot diff tests.
   if (params.has('fixture')) {
     const container = document.createElement('div');
     container.id = 'canvas-container';
@@ -34,11 +36,59 @@ if (app) {
     app.appendChild(container);
     mountCanvasFromQueryString(container);
   } else {
-    const sub = document.createElement('div');
-    sub.style.cssText = 'margin: 0 12px; max-width: 600px;';
-    app.appendChild(sub);
-    const fixture = FIXTURES['fullPreRun']!;
-    const handle = mountEditor(sub, fixture.puzzle);
-    window.__editor = handle;
+    mountEditorAndPlaybackHarness(app);
   }
+}
+
+function mountEditorAndPlaybackHarness(app: HTMLElement): void {
+  // Use the small solvable fixture by default so Run produces a
+  // satisfying ~6-cycle playthrough. `fullPreRun` etc. remain
+  // available via `?fixture=NAME` for screenshot tests.
+  const fixture = FIXTURES['editorDefault']!;
+  const puzzle = fixture.puzzle;
+
+  // Top-level actions toolbar (above the editor/playback view).
+  const actions = document.createElement('div');
+  actions.style.cssText = 'margin: 0 12px 8px; display: flex; gap: 8px; align-items: center;';
+  const runBtn = document.createElement('button');
+  runBtn.type = 'button';
+  runBtn.id = 'run-button';
+  runBtn.textContent = '▶ Run';
+  runBtn.style.cssText = `
+    padding: 6px 14px; background: var(--accent); color: var(--bg);
+    border: 1px solid var(--accent); border-radius: 4px; cursor: pointer;
+    font: inherit; font-weight: 600;
+  `;
+  actions.appendChild(runBtn);
+  app.appendChild(actions);
+
+  const sub = document.createElement('div');
+  sub.style.cssText = 'margin: 0 12px; max-width: 700px;';
+  app.appendChild(sub);
+
+  function switchToEdit(): void {
+    if (window.__playback) {
+      window.__playback.destroy();
+      delete window.__playback;
+    }
+    const handle = mountEditor(sub, puzzle);
+    window.__editor = handle;
+    runBtn.disabled = false;
+  }
+
+  function switchToPlay(): void {
+    const editor = window.__editor;
+    if (!editor) return;
+    const draft = editor.getState().draft;
+    editor.destroy();
+    delete window.__editor;
+    const handle = mountPlayback(sub, puzzle, draft, () => switchToEdit());
+    window.__playback = handle;
+    runBtn.disabled = true;
+  }
+
+  runBtn.addEventListener('click', () => switchToPlay());
+
+  // Initial state: editor.
+  switchToEdit();
 }
