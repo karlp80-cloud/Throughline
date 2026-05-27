@@ -13,36 +13,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phases 0–10 complete; Phase 10 reviewer-approved.** Origin: https://github.com/karlp80-cloud/Throughline.
+**Phases 0–11 complete; Phase 11 awaiting reviewer.** Origin: https://github.com/karlp80-cloud/Throughline.
 
-Phase 10 added the companion CLI under `cli/`. Modules:
-- `solver/prng.ts` — splitmix64 PRNG + FNV-1a hash (the only place pseudo-randomness lives).
-- `writer.ts` — atomic temp+fsync+rename; three-policy path safety (inside-CWD; parent must exist; parent's realpath inside CWD).
-- `validator.ts` — wraps `parseCampaign`; strips a single optional Markdown code fence; returns `ValidationResult` (never throws).
-- `solver/candidate.ts` + `solver/index.ts` — connectivity-biased random candidates, iterated until victory or budget exhausts. Reuses Phase 1's `runUntilHalt` unchanged.
-- `promptBuilder.ts` + `prompts/system.md` — checked-in markdown (~15.5 KB, under the 30 KB argv envelope); all dynamic content in `buildUserPrompt`.
-- `claudeSpawn.ts` — security-critical subprocess wrapper: `spawn('claude', argv, { shell: false, ... })`, user prompt via stdin, 4 KB stderr cap, 60 s timeout with SIGTERM → SIGKILL after 2 s grace.
-- `generator.ts` — state machine: 3 manifest retries with feedback, then 3 per-puzzle regens. Seeded backoff for reproducible retry timing. Hard ceiling 3 + 3 × max_puzzles LLM calls.
-- `index.ts` — CLI entry via `node:util.parseArgs`. Exit codes 0/1/2/3/4/5 per architect §9.3.
+Phase 11 added the Tauri desktop scaffold + procgen flow that ties the Phase 10 CLI to the game. The wiring is:
 
-Built via `cli/build.mjs` (tsc --noEmit + esbuild bundle) → `dist-cli/throughline-gen.mjs`. Bin wrapper: `bin/throughline-gen`. Static-analysis canaries (`no-shell.test.ts`, `no-eval.test.ts`, `system-prompt-shape.test.ts`, `schema-shape.test.ts`) encode the reviewer checklist as tests.
+- **`src-tauri/`** — Tauri 2.x scaffold (`npx tauri init`). Identifier `org.throughline.app`. Three commands in `commands.rs`:
+  - `generate_campaign(opts)` — spawns `Command::new("node")` (no shell) with discrete argv; 5-min tokio timeout; emits `procgen:progress` heartbeats every 2 s; per-job `Mutex<HashMap>` for cancel.
+  - `cancel_generation(jobId)` — non-blocking `start_kill()`; cancelling a finished job is a no-op.
+  - `read_campaign_file(path)` — canonicalize + reject outside the app data dir.
+  - `sanitize.rs` — hand-rolled ANSI/control-char scrubber + 1 KB display cap (no `regex` dep).
+  - `no_shell_test.rs` — Rust-side static-analysis canary mirroring `cli/src/__tests__/no-shell.test.ts`.
+- **`src/platform.ts`** — the only file in shared code that knows Tauri exists. `detectPlatform()` / `isTauri()` synchronous + memoized; `tauriHandle()` dynamic-imports `@tauri-apps/api/{core,event}` on first call. `src/__tests__/no-tauri-static-import.test.ts` enforces the discipline.
+- **`src/campaign/procgen/`** — `api.ts` (TS bindings for the three Rust commands), `hints.ts` (LibraryIndex → `--avoid-themes` + `--gentle`), `flow.ts` (composes the pre-gen modal + browser fallback into the harness's `NewCampaignFlowDeps`).
+- **`src/campaign/dom/`** — `newCampaignButton.ts` (data-role="new-campaign", always visible — Q3), `newCampaignModal.ts` (form + generating view + 5:30 safety timer), `browserFallback.ts` (file picker + parseCampaign), `errorModal.ts` (per-class copy + button set, stderr via `textContent`).
+- **Harness extension** (`src/campaign/dom/harness.ts`) — new methods `loadGeneratedManifest(json, sourcePath, seedUsed)` and `loadCampaignFromSourcePath(path, seed, reader)`; the reducer stays pure. The main menu now also renders a "Generated campaigns" section listing every procgen LibraryEntry with a Resume/Remove pair.
+- **`LibraryEntry.sourcePath`** — additive optional string field; no `LIBRARY_VERSION` bump. Built-ins omit it; procgen entries carry the absolute on-disk path so the harness can resume on relaunch.
+- **`tauri.conf.json#bundle.resources`** — ships `bin/throughline-gen` + `dist-cli/**/*` with the desktop build.
 
-**Tally:** 512 unit (+136 cli, +1 SIGKILL-escalation test) + 15 e2e. Tsc + lint clean. 1 unit test skipped on Windows (symlink test — symlink creation needs admin). Live-LLM integration test gated by `RUN_LIVE_LLM=1`, never runs in CI.
+The Rust→Node→`claude` chain inherits the user's privileges; `claude` is the trust anchor for LLM calls (Q9 resolved: no Node sidecar — desktop expects `node` on PATH; `BinaryNotFound` modal points at the install docs when it's missing).
 
-Phase 10 reviewer verdict: **PASS-WITH-NOTES**; full report in [docs/reviews/phase-10.md](docs/reviews/phase-10.md). Three low-severity + two trivial findings all addressed in the wrap-up commit:
-- `src/editor/dom/opList.ts` help text now uses `createElement` + `textContent` (CLAUDE.md invariant #6 honored everywhere, not just where LLM data flows).
-- `cli/src/validator.ts` no longer rethrows on unrecognized errors — wraps into a structured `ValidationFailure`.
-- `cli/src/__tests__/claudeSpawn.test.ts` adds a fake-timer test that confirms SIGTERM → SIGKILL escalation after the 2 s grace.
-- `cli/src/promptBuilder.ts` duplicate `CANDIDATE_PATHS` entry removed.
-- `cli/src/writer.ts` dead `'traversal'` `WriterPathErrorKind` member removed.
+**Tauri requirement note:** the desktop build requires the Rust toolchain (`rustup`) and Tauri 2.x system prerequisites (MSVC build tools + WebView2 on Win10+). Browser build (`npm run dev`, `npm run build`) has zero Rust dependency.
 
-Live `claude -p` smoke run passed (2026-05-27, 21.8 s). Real subprocess → valid Zod-parsed manifest → solver-verified solvable. Re-run via `RUN_LIVE_LLM=1 npm run test:cli:live`.
+**Tally:** 574 unit (+62 from Phase 11) + 21 e2e (+6 procgen). Tsc + lint clean. 1 unit test skipped on Windows (symlink test — symlink creation needs admin). Cargo: 9 Rust tests pass (`cargo test --manifest-path src-tauri/Cargo.toml`). Live-LLM integration test gated by `RUN_LIVE_LLM=1`, never runs in CI.
 
-Phase 9 playtest closed (single-tester pass, log at [docs/playtest/tutorial-karlp.md](docs/playtest/tutorial-karlp.md)). 6/6 findings landed; root-cause for the "reactor does nothing" report turned out to be the editor's missing `recipe` field on placed reactor tiles, which also closed the Phase-9 filter-type gap. No mentor-copy changes were needed.
+Phase 10 reviewer verdict: **PASS-WITH-NOTES**; full report in [docs/reviews/phase-10.md](docs/reviews/phase-10.md).
 
-**Pending:** none.
+Phase 9 playtest closed (single-tester pass, log at [docs/playtest/tutorial-karlp.md](docs/playtest/tutorial-karlp.md)).
 
-**Next:** Phase 11 — E2E procgen integration (Tauri side spawns `throughline-gen`, surfaces progress, loads the produced manifest into the game). Moderate cycle.
+**Pending:** Phase 11 reviewer pass + the manual checkpoint — hit `npm run tauri dev` on a clean profile, play through one generated campaign 30+ minutes, file findings in `docs/playtest/procgen-first-pass.md`.
+
+**Next:** Phase 12 — Packaging.
 
 When a phase completes, update this section to point at the next phase.
 
@@ -74,9 +74,13 @@ npm run test:e2e      # playwright test (auto-builds via pretest:e2e hook)
 npm test              # unit + e2e
 npm run build         # tsc --noEmit + vite build
 npm run dev           # local dev server (port 5173)
+npm run tauri         # delegates to @tauri-apps/cli (e.g. `npm run tauri dev`)
+cargo test --manifest-path src-tauri/Cargo.toml  # Rust-side tests
 ```
 
 The Playwright web server uses `vite preview` against the built `dist/`, which is why `test:e2e` builds first. CI installs Playwright Chromium with `npx playwright install --with-deps chromium`.
+
+The Rust-side tests (sanitize + no-shell canary) require `rustup` + Tauri 2.x system prerequisites (MSVC build tools, WebView2 on Win10+). They're separate from the Node test suite; CI runs both.
 
 ## Load-bearing invariants
 
@@ -89,6 +93,8 @@ Don't violate these without updating [throughline-design.md](throughline-design.
 5. **Two-phase cycle resolution.** Phase A declares, Phase B resolves. Don't collapse them.
 6. **LLM output is untrusted.** Zod-validated on load; narrative text always rendered via `textContent`, never `innerHTML`; rule DSL is a parsed AST — **no `eval`, no `Function()`, ever**; glyph keys resolve against a fixed library; manifest paths checked for traversal.
 7. **Subprocess safety (CLI).** `child_process.spawn(cmd, argv, { shell: false })`. No `exec`, no shell strings.
+8. **Subprocess safety (Rust).** `Command::new("node").args(&argv)`. Never `Command::new("sh")`/`"cmd"`/`"-c"`/`"/C"`. Verified by `src-tauri/src/no_shell_test.rs`.
+9. **Tauri imports only in `src/platform.ts`.** Other files route Tauri IPC through `tauriHandle()` (dynamic import). Verified by `src/__tests__/no-tauri-static-import.test.ts`.
 
 ## Platform notes
 
