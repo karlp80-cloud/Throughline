@@ -75,6 +75,19 @@ export async function run(opts: ClaudeSpawnOptions): Promise<ClaudeSpawnResult> 
   const start = Date.now();
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
+  // Phase 11 manual-playtest diagnostic. Enabled by env var so it only
+  // fires when we're investigating a hang; vitest live tests are
+  // unaffected. Output goes to this process's stderr (which the Rust
+  // side captures + sanitizes + surfaces in the error modal).
+  const trace = (msg: string): void => {
+    if (process.env['THROUGHLINE_TRACE_SPAWN'] === '1') {
+      const dt = Date.now() - start;
+      process.stderr.write(`[spawn-trace +${dt}ms] ${msg}\n`);
+    }
+  };
+
+  trace(`spawning claude (cwd=${process.cwd()})`);
+
   // shell:false is non-negotiable. The argv is a literal array; no
   // string-concat anywhere along this codepath. The architect doc
   // calls this out as the structural defense against shell injection.
@@ -84,24 +97,40 @@ export async function run(opts: ClaudeSpawnOptions): Promise<ClaudeSpawnResult> 
     windowsHide: true,
   });
 
+  trace(`spawned pid=${child.pid}, stdin=${child.stdin ? 'yes' : 'no'}`);
+
   // Write the user prompt to stdin; then close stdin so claude knows
   // the input is complete.
   if (child.stdin) {
-    child.stdin.write(opts.userPrompt, 'utf8');
-    child.stdin.end();
+    child.stdin.write(opts.userPrompt, 'utf8', (err) => {
+      trace(`stdin.write callback err=${err ? err.message : 'null'}`);
+    });
+    child.stdin.end(() => {
+      trace('stdin.end callback');
+    });
   }
 
   const stdoutChunks: Buffer[] = [];
   const stderrChunks: Buffer[] = [];
   let stderrBytes = 0;
   let stderrTruncated = false;
+  let firstStdoutAt: number | null = null;
+  let firstStderrAt: number | null = null;
 
   child.stdout?.on('data', (chunk: Buffer | string) => {
     const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, 'utf8');
+    if (firstStdoutAt === null) {
+      firstStdoutAt = Date.now() - start;
+      trace(`first stdout chunk (${buf.length} bytes)`);
+    }
     stdoutChunks.push(buf);
   });
   child.stderr?.on('data', (chunk: Buffer | string) => {
     const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, 'utf8');
+    if (firstStderrAt === null) {
+      firstStderrAt = Date.now() - start;
+      trace(`first stderr chunk (${buf.length} bytes): ${buf.toString('utf8').slice(0, 200)}`);
+    }
     if (stderrBytes < STDERR_CAP_BYTES) {
       const remaining = STDERR_CAP_BYTES - stderrBytes;
       if (buf.length <= remaining) {
@@ -142,6 +171,12 @@ export async function run(opts: ClaudeSpawnOptions): Promise<ClaudeSpawnResult> 
     let killGraceTimer: ReturnType<typeof setTimeout>;
     const timeoutTimer = setTimeout(() => {
       timeoutFired = true;
+      trace(
+        `timeout fired after ${timeoutMs}ms (firstStdout=${firstStdoutAt}, firstStderr=${firstStderrAt}, stdoutBytes=${stdoutChunks.reduce(
+          (n, b) => n + b.length,
+          0,
+        )}, stderrBytes=${stderrBytes})`,
+      );
       child.kill('SIGTERM');
       killGraceTimer = setTimeout(() => {
         child.kill('SIGKILL');

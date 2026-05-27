@@ -298,6 +298,11 @@ pub async fn generate_campaign(
     ] {
         cmd.env_remove(var);
     }
+    // Phase 11 manual-playtest diagnostic: have the CLI emit
+    // spawn-trace lines so the Rust-captured stderr includes timing
+    // info we can read back from the error modal. Cheap to leave on;
+    // strip in Phase 12 once the hang is fully understood.
+    cmd.env("THROUGHLINE_TRACE_SPAWN", "1");
     // No CREATE_NO_WINDOW: previously set to suppress the console flash,
     // but combining no-console + the Claude Code parent-session markers
     // above appears to be what triggers the spawned claude to hang. A
