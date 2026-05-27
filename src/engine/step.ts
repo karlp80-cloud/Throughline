@@ -233,7 +233,14 @@ export function stepOnce(
   }
 
   const collisions: CollisionEvent[] = [];
-  for (const [key, info] of moveResults.collisionsByTarget) {
+  // Sort entries before iterating — memo §10 forbids Map insertion-order
+  // iteration even where the upstream insertions are deterministic.
+  // Sorting here makes the iteration order independent of how
+  // resolveAgentMoves happens to fill collisionsByTarget.
+  const sortedCollisions = Array.from(moveResults.collisionsByTarget.entries()).sort(([k1], [k2]) =>
+    k1.localeCompare(k2),
+  );
+  for (const [key, info] of sortedCollisions) {
     collisions.push({
       pos: fromPosKey(key),
       winner: info.winner,

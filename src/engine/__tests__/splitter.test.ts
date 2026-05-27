@@ -63,6 +63,33 @@ describe('splitter', () => {
     expect(splitterIntents(tile, makeWorld())).toEqual([]);
   });
 
+  test('alternation persists across cycles via tileState', () => {
+    // Two cycles, one cargo each. The first cycle should send the
+    // cargo to perpendicular[0] (N for facing E) and write a
+    // flipSplitter intent setting nextOut=S. The second cycle reads
+    // that stored direction and sends cargo south, flipping back to N.
+    const tile = splitter([2, 2], 'E');
+
+    // Cycle 1: no prior state → uses perpendicular[0] = N
+    const w1 = makeWorld({ cargo: cargoMap({ '2,2': [cargo(10, 'a')] }) });
+    const i1 = splitterIntents(tile, w1);
+    expect(i1).toEqual([
+      { kind: 'moveCargo', cargo: { id: 10, type: 'a' }, from: [2, 2], to: [2, 1] },
+      { kind: 'flipSplitter', at: [2, 2], nextOut: 'S' },
+    ]);
+
+    // Cycle 2: stored nextOut=S → cargo goes south, flips back to N.
+    const w2 = makeWorld({
+      cargo: cargoMap({ '2,2': [cargo(11, 'a')] }),
+      tileState: { [pk(2, 2)]: { splitterNextOut: 'S' } },
+    });
+    const i2 = splitterIntents(tile, w2);
+    expect(i2).toEqual([
+      { kind: 'moveCargo', cargo: { id: 11, type: 'a' }, from: [2, 2], to: [2, 3] },
+      { kind: 'flipSplitter', at: [2, 2], nextOut: 'N' },
+    ]);
+  });
+
   test('cargo iteration order is by id (determinism), regardless of array order', () => {
     const tile = splitter([0, 0], 'E');
     const world = makeWorld({
