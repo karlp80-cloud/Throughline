@@ -254,7 +254,7 @@ Already pinned in §2 (`Solution`). Three notes:
 | `splitter` | "Cargo arrives FROM the OPPOSITE of facing; departs ALTERNATELY along the two perpendiculars to facing." Example: facing `E` ⇒ cargo arrives from `W`, departs `N` and `S` alternately — **per cargo, not per cycle**. The first cargo on the cell this cycle goes to perpendicular[0]; the second to perpendicular[1]; the third back to perpendicular[0]; etc. The next-out direction (where the NEXT arriving cargo should go) is persisted in `tileState[posKey].splitterNextOut` for use by future cycles. |
 | `merger` | "Cargo arrives FROM the two perpendiculars to facing; departs in the facing direction." Example: facing `E` ⇒ arrivals from `N` and `S` combine into a stream going `E`. |
 | `filter` | Cargo of `filterType` passes in the facing direction; others stay on the cell (blocked). |
-| `reactor` | Combines cargo of the recipe's `inputs` types currently on the cell into one cargo of the recipe's `output` type, leaving on the facing direction. |
+| `reactor` | Combines cargo of the recipe's `inputs` types currently on the cell into one cargo of the recipe's `output` type. Per memo Q8(a), consumes exactly **one set per cycle**. Output cargo is produced **at-cell** and stays there until something else moves it — the reactor does NOT transport. Players place an adjacent conveyor to route output away. The `facing` field is reserved for renderer orientation; the engine ignores it. |
 
 **Splitter alternation state** lives in the tile, not the world. Since we're keeping `PlacedTile` immutable per §2, the alternation toggle state is held in `WorldState` under a separate `tileState` map (added below; not in original §2 sketch — flag in §11):
 
@@ -333,7 +333,7 @@ For each tile `t` (iterated in sorted order of `posKey`):
 - Splitter: declare "move ALL cargo at t.pos to neighbor in `splitterNextOut`"; the next-out toggle flips for next cycle.
 - Merger: passive — cargo just arrives via neighbors' conveyor declarations. Merger declares "all cargo here moves to neighbor in t.facing" (so it acts like a one-way conveyor with permissive inputs).
 - Filter: declare "move cargo of type t.filterType to neighbor in t.facing; leave others in place".
-- Reactor: if the multiset of cargo on the cell ⊇ recipe.inputs, declare "consume those inputs, produce one cargo of recipe.output (with fresh id) at this cell" (the new cargo will move out next cycle via the reactor's own conveyor declaration — keep recipe & transport orthogonal).
+- Reactor: if the multiset of cargo on the cell ⊇ recipe.inputs, declare consumeCargo intents for one set of inputs (lowest-id cargo per type) plus a `produceCargo` intent for the output at the same cell. The reactor itself does **not** declare transport — output stays at the reactor until a player-built conveyor moves it. This keeps reaction and transport orthogonal in the cleanest possible way.
 
 ### Phase B — RESOLVE
 
