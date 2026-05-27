@@ -25,19 +25,20 @@ if (app) {
   app.appendChild(h);
 
   const params = new URLSearchParams(window.location.search);
-  if (params.get('editor') === '1') {
-    const sub = document.createElement('div');
-    sub.style.cssText = 'margin: 0 12px; max-width: 600px;';
-    app.appendChild(sub);
-    // Default to a small editable puzzle.
-    const fixture = FIXTURES['fullPreRun']!;
-    const handle = mountEditor(sub, fixture.puzzle);
-    window.__editor = handle;
-  } else {
+  // Default route is the editor. `?fixture=NAME` switches to the static
+  // renderer used by Phase 2's screenshot diff tests.
+  if (params.has('fixture')) {
     const container = document.createElement('div');
     container.id = 'canvas-container';
     container.style.cssText = 'margin: 8px 12px;';
     app.appendChild(container);
     mountCanvasFromQueryString(container);
+  } else {
+    const sub = document.createElement('div');
+    sub.style.cssText = 'margin: 0 12px; max-width: 600px;';
+    app.appendChild(sub);
+    const fixture = FIXTURES['fullPreRun']!;
+    const handle = mountEditor(sub, fixture.puzzle);
+    window.__editor = handle;
   }
 }

@@ -12,9 +12,9 @@
  * The mounted editor re-renders the canvas on every dispatch.
  */
 
-import type { Puzzle } from '../engine/types';
+import type { Pos, Puzzle } from '../engine/types';
 import { initialWorld } from '../engine';
-import { render } from '../render/renderer';
+import { render, type RenderOptions } from '../render/renderer';
 import { mountCanvas } from '../app/canvasMount';
 import { attachCanvasInput } from './dom/canvasInput';
 import { mountOpList } from './dom/opList';
@@ -29,6 +29,7 @@ export interface EditorHandle {
 
 export function mountEditor(container: HTMLElement, puzzle: Puzzle): EditorHandle {
   let state = initialEditorState(puzzle);
+  let hoverCell: Pos | null = null;
 
   // DOM scaffolding.
   container.replaceChildren();
@@ -43,17 +44,37 @@ export function mountEditor(container: HTMLElement, puzzle: Puzzle): EditorHandl
   const canvas = mountCanvas(canvasContainer, puzzle, state.draft, world);
   const ctx = canvas.getContext('2d')!;
 
+  function rerenderCanvas(): void {
+    const opts: RenderOptions =
+      state.mode.kind === 'placing-tile' && hoverCell !== null
+        ? {
+            showPaths: true,
+            preview: {
+              pos: hoverCell,
+              tileKind: state.mode.tileKind,
+              facing: state.mode.facing,
+            },
+          }
+        : { showPaths: true };
+    render(ctx, world, puzzle, state.draft, opts);
+  }
+
   const palette = mountPalette(paletteEl, () => state, dispatch);
   const opList = mountOpList(opListEl, () => state, dispatch);
-  const detachInput = attachCanvasInput(canvas, () => state, dispatch);
+  const detachInput = attachCanvasInput(canvas, () => state, dispatch, (cell) => {
+    hoverCell = cell;
+    rerenderCanvas();
+  });
 
   function dispatch(action: EditorAction): void {
     state = reduce(state, action);
-    // Re-render canvas with the draft tiles (engine state stays at cycle 0).
-    render(ctx, world, puzzle, state.draft);
+    rerenderCanvas();
     palette.update();
     opList.update();
   }
+
+  // Initial paint with paths visible.
+  rerenderCanvas();
 
   return {
     getState: () => state,

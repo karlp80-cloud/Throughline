@@ -2,6 +2,8 @@
  * Mouse + keyboard handlers on the canvas.
  *
  * Mouse: convert click coords to grid cell, dispatch CLICK_CELL.
+ * Mousemove: report the hovered cell to the harness via `onHover`
+ * so the renderer can paint a ghost tile preview.
  * Keyboard: R = rotate, Esc = cancel, Z = undo path vertex,
  * Enter = commit path, Backspace/Delete = delete selected tile.
  *
@@ -9,6 +11,7 @@
  * to focus the canvas first.
  */
 
+import type { Pos } from '../../engine/types';
 import { CELL_SIZE } from '../../render/renderer';
 import type { EditorAction, EditorState } from '../state';
 
@@ -16,19 +19,28 @@ export function attachCanvasInput(
   canvas: HTMLCanvasElement,
   getState: () => EditorState,
   dispatch: (a: EditorAction) => void,
+  onHover: (cell: Pos | null) => void = () => {},
 ): () => void {
-  function onClick(ev: MouseEvent): void {
+  function cellFromEvent(ev: MouseEvent): Pos {
     const rect = canvas.getBoundingClientRect();
     const x = ev.clientX - rect.left;
     const y = ev.clientY - rect.top;
-    // Use the canvas's intrinsic vs CSS size in case of zoom.
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    const gx = ((x * scaleX) / CELL_SIZE) | 0;
-    const gy = ((y * scaleY) / CELL_SIZE) | 0;
-    dispatch({ type: 'CLICK_CELL', pos: [gx, gy] });
+    return [((x * scaleX) / CELL_SIZE) | 0, ((y * scaleY) / CELL_SIZE) | 0];
+  }
+  function onClick(ev: MouseEvent): void {
+    dispatch({ type: 'CLICK_CELL', pos: cellFromEvent(ev) });
+  }
+  function onMove(ev: MouseEvent): void {
+    onHover(cellFromEvent(ev));
+  }
+  function onLeave(): void {
+    onHover(null);
   }
   canvas.addEventListener('click', onClick);
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseleave', onLeave);
 
   function onKey(ev: KeyboardEvent): void {
     const s = getState();
@@ -63,6 +75,8 @@ export function attachCanvasInput(
 
   return () => {
     canvas.removeEventListener('click', onClick);
+    canvas.removeEventListener('mousemove', onMove);
+    canvas.removeEventListener('mouseleave', onLeave);
     window.removeEventListener('keydown', onKey);
   };
 }

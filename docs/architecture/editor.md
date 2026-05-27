@@ -124,6 +124,34 @@ Re-render strategy: on every dispatch, call `render(ctx, ...)`. The canvas is sm
 - **Unit (`state.test.ts`):** every action's effect on every legal mode/selection combination. Pure-function tests; no DOM.
 - **e2e (`editor.spec.ts`):** Playwright drives a realistic construction: load a known puzzle, click palette → click cells → place tiles → click agent → draw path → open op list → add ops → assert final `state.draft` deep-equals an expected fixture. The editor exposes a `window.__editor` reference in dev/test builds so the test can read state.
 
+## Test API
+
+When mounted via `?editor=1` or as the default route, the editor stashes its handle on `window.__editor`:
+
+```ts
+declare global {
+  interface Window {
+    __editor?: {
+      getState(): EditorState;
+      dispatch(action: EditorAction): void;
+      destroy(): void;
+    };
+  }
+}
+```
+
+This is intended for Playwright tests AND for ad-hoc manual scripting from the browser console:
+
+```js
+// In DevTools, while at http://localhost:5173/
+window.__editor.dispatch({ type: 'SELECT_TILE_KIND', tileKind: 'conveyor' });
+window.__editor.dispatch({ type: 'CLICK_CELL', pos: [3, 2] });
+window.__editor.getState().draft.tiles;
+// → [{ pos: [3,2], kind: 'conveyor', facing: 'E' }]
+```
+
+See `e2e/editor.spec.ts` for the canonical pattern.
+
 ## What this phase does NOT do
 
 - No undo/redo history. v1 has no global undo; the path-undo Z key is local to path-drawing only.

@@ -78,9 +78,14 @@ export function mountOpList(
 
     if (!editingAgent) {
       const hint = document.createElement('div');
-      hint.textContent =
-        'Editor: pick a tile from the palette and click a cell to place; click the grid to select; R rotates; Backspace deletes. Use the buttons above to edit agent ops or path.';
-      hint.style.cssText = 'color: var(--muted); font-family: sans-serif; font-size: 13px;';
+      hint.innerHTML = [
+        '<strong>Place tiles:</strong> pick a kind from the palette → click cells. R rotates while placing.',
+        '<strong>Edit/delete tiles:</strong> press Esc to leave placing mode → click a tile to select → R rotates, Backspace deletes.',
+        '<strong>Path drawing:</strong> click <em>Edit path: a1</em> → click cells to append vertices, Z undoes, Enter commits, Esc cancels.',
+        '<strong>Ops:</strong> click <em>Edit ops: a1</em> → use the dropdown + Add to append; ↑/↓/× per row.',
+      ].join('<br>');
+      hint.style.cssText =
+        'color: var(--muted); font-family: sans-serif; font-size: 12px; line-height: 1.6;';
       container.appendChild(hint);
       return;
     }

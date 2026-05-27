@@ -116,15 +116,16 @@ function drawGlyphAt(
   ctx: CanvasRenderingContext2D,
   key: GlyphKey,
   pos: Pos,
-  fill: string,
-  stroke?: string,
+  color: string,
   facing?: Direction,
+  alpha: number = 1,
 ): void {
   ensureGlyphPaths();
   const path = glyphPaths!.get(key);
   if (!path) return;
   const { x, y } = cellOrigin(pos);
   ctx.save();
+  ctx.globalAlpha = alpha;
   ctx.translate(snap(x), snap(y));
   // Glyphs are 0..100 viewBox; scale to cell.
   ctx.scale(CELL_SIZE / 100, CELL_SIZE / 100);
@@ -134,15 +135,18 @@ function drawGlyphAt(
     rotateForDirection(ctx, facing);
     ctx.translate(-50, -50);
   }
-  ctx.fillStyle = fill;
-  if (stroke !== undefined) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 4;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-  }
+  // Always BOTH fill and stroke with `color`. Closed-shape glyphs
+  // (filter hourglass, reactor hexagon, output square) read as filled
+  // forms; stroke-only glyphs (splitter Y, merger ⋊, conveyor arrow)
+  // become visible from the stroke. lineWidth is in glyph-space
+  // coordinates (viewBox is 0..100), so 4 units ≈ 2 px at CELL_SIZE 48.
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
   ctx.fill(path);
-  if (stroke !== undefined) ctx.stroke(path);
+  ctx.stroke(path);
   ctx.restore();
 }
 
@@ -172,15 +176,44 @@ function tileKindToGlyph(kind: PlacedTile['kind']): GlyphKey {
 
 function drawTiles(ctx: CanvasRenderingContext2D, tiles: readonly PlacedTile[]): void {
   for (const tile of tiles) {
-    drawGlyphAt(
-      ctx,
-      tileKindToGlyph(tile.kind),
-      tile.pos,
-      paletteColor('fg'),
-      undefined,
-      tile.facing,
-    );
+    drawGlyphAt(ctx, tileKindToGlyph(tile.kind), tile.pos, paletteColor('fg'), tile.facing);
   }
+}
+
+function drawPaths(
+  ctx: CanvasRenderingContext2D,
+  paths: Readonly<Record<string, readonly Pos[]>>,
+): void {
+  ctx.save();
+  ctx.strokeStyle = paletteColor('accent');
+  ctx.globalAlpha = 0.5;
+  ctx.lineWidth = 3;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  for (const id of Object.keys(paths).sort()) {
+    const path = paths[id];
+    if (!path || path.length === 0) continue;
+    ctx.beginPath();
+    const head = path[0]!;
+    const start = cellOrigin(head);
+    ctx.moveTo(snap(start.x + CELL_SIZE / 2), snap(start.y + CELL_SIZE / 2));
+    for (let i = 1; i < path.length; i++) {
+      const p = path[i]!;
+      const c = cellOrigin(p);
+      ctx.lineTo(snap(c.x + CELL_SIZE / 2), snap(c.y + CELL_SIZE / 2));
+    }
+    ctx.stroke();
+    // Vertex markers
+    ctx.fillStyle = paletteColor('accent');
+    for (let i = 1; i < path.length; i++) {
+      const p = path[i]!;
+      const c = cellOrigin(p);
+      ctx.beginPath();
+      ctx.arc(snap(c.x + CELL_SIZE / 2), snap(c.y + CELL_SIZE / 2), 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 
 function drawCargo(ctx: CanvasRenderingContext2D, world: WorldState, puzzle: Puzzle): void {
@@ -261,20 +294,54 @@ function drawAgent(ctx: CanvasRenderingContext2D, agent: AgentState): void {
 
 // ─── Public API ───────────────────────────────────────────────────
 
+export interface RenderOptions {
+  /** Show agent paths as polylines. Defaults to true. */
+  readonly showPaths?: boolean;
+  /** A "ghost tile" preview (e.g. during placing-tile mode). */
+  readonly preview?: {
+    readonly pos: Pos;
+    readonly tileKind: PlacedTile['kind'];
+    readonly facing: Direction;
+  };
+}
+
 export function render(
   ctx: CanvasRenderingContext2D,
   world: WorldState,
   puzzle: Puzzle,
   solution: Solution,
+  opts: RenderOptions = {},
 ): void {
   drawBackground(ctx, puzzle);
   drawGridLines(ctx, puzzle);
   drawObstacles(ctx, puzzle);
   drawInputsAndOutputs(ctx, puzzle);
   drawTiles(ctx, solution.tiles);
+  if (opts.showPaths !== false) drawPaths(ctx, solution.paths);
   drawCargo(ctx, world, puzzle);
   drawAgents(ctx, world);
-  // facingArrowPath is unused for now but reserved for an overlay
-  // facing-direction indicator. Reference it so eslint doesn't complain.
+  if (opts.preview) drawPreviewTile(ctx, opts.preview, puzzle, solution);
+  // facingArrowPath is reserved for a future facing overlay; reference
+  // it so eslint doesn't complain about an unused-vars warning.
   void facingArrowPath;
+}
+
+function drawPreviewTile(
+  ctx: CanvasRenderingContext2D,
+  preview: NonNullable<RenderOptions['preview']>,
+  puzzle: Puzzle,
+  solution: Solution,
+): void {
+  // Hide preview on cells where placement would be rejected.
+  const { pos } = preview;
+  if (pos[0] < 0 || pos[0] >= puzzle.grid.w || pos[1] < 0 || pos[1] >= puzzle.grid.h) return;
+  if (puzzle.obstacles.some((o) => o[0] === pos[0] && o[1] === pos[1])) return;
+  if (puzzle.inputs.some((i) => i.pos[0] === pos[0] && i.pos[1] === pos[1])) return;
+  if (puzzle.outputs.some((o) => o.pos[0] === pos[0] && o.pos[1] === pos[1])) return;
+  // If a tile already occupies the cell, preview the REPLACEMENT (which
+  // is the current behavior); skip the ghost so the existing tile is
+  // still visible.
+  if (solution.tiles.some((t) => t.pos[0] === pos[0] && t.pos[1] === pos[1])) return;
+
+  drawGlyphAt(ctx, tileKindToGlyph(preview.tileKind), pos, paletteColor('fg'), preview.facing, 0.35);
 }
