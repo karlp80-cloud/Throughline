@@ -1,0 +1,536 @@
+// Tauri commands for procgen integration.
+//
+// Three commands per architect §3.1:
+//   - generate_campaign(opts) -> GenerateOk | ProcgenError
+//   - cancel_generation(jobId) -> () | ProcgenError
+//   - read_campaign_file(path) -> String | ProcgenError
+//
+// Subprocess invocation discipline (architect §4):
+//   - `Command::new("node")` with discrete argv vec. No shell.
+//   - 5-minute tokio wall-clock timeout wrapping the CLI's own
+//     internal retry budget.
+//   - Per-job-id `Mutex<HashMap>` so cancel can kill an in-flight
+//     child.
+//   - `procgen:progress` event emitted every ~2 s while the child is
+//     alive so the UI keeps an elapsed counter ticking.
+//   - Stderr captured (capped at 4 KB), then sanitized via
+//     `sanitize::sanitize_stderr` before crossing the IPC.
+
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::process::Stdio;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager, State};
+use tokio::io::AsyncReadExt;
+use tokio::process::{Child, Command};
+use tokio::sync::Mutex;
+use tokio::time::sleep;
+
+use crate::sanitize::sanitize_stderr;
+
+// ─── Types crossing the IPC boundary ────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateOpts {
+    pub job_id: String,
+    pub seed: Option<String>,
+    pub acts: Option<u32>,
+    pub puzzles_per_act: Option<u32>,
+    pub gentle: Option<bool>,
+    pub avoid_themes: Option<Vec<String>>,
+    pub llm_timeout_ms: Option<u32>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateOk {
+    pub path: String,
+    pub manifest_json: String,
+    pub elapsed_ms: u64,
+    pub seed_used: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub enum ProcgenErrorKind {
+    BinaryNotFound,
+    SpawnFailed,
+    Timeout,
+    Cancelled,
+    CliExit,
+    /// Reserved per architect §3.2 — the Rust side never parses JSON,
+    /// but the TS surface declares this kind for shape parity with
+    /// the typed bindings.
+    #[allow(dead_code)]
+    StdoutNotJson,
+    FileReadFailed,
+    PathRejected,
+    InternalError,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcgenError {
+    pub kind: ProcgenErrorKind,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cli_exit_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cli_stderr: Option<String>,
+}
+
+impl ProcgenError {
+    fn new(kind: ProcgenErrorKind, message: impl Into<String>) -> Self {
+        Self {
+            kind,
+            message: message.into(),
+            cli_exit_code: None,
+            cli_stderr: None,
+        }
+    }
+    fn with_cli(mut self, exit: i32, stderr: String) -> Self {
+        self.cli_exit_code = Some(exit);
+        self.cli_stderr = Some(stderr);
+        self
+    }
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct ProgressPayload {
+    job_id: String,
+    phase: &'static str,
+    elapsed_ms: u64,
+}
+
+// ─── Application state ──────────────────────────────────────────────
+
+/// One slot per active job. The Mutex<Option<Child>> lets cancel take
+/// the child out from under the supervising task and start_kill it.
+pub type JobMap = Arc<Mutex<HashMap<String, Arc<Mutex<Option<Child>>>>>>;
+
+#[derive(Default)]
+pub struct ProcgenState {
+    jobs: JobMap,
+}
+
+impl ProcgenState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────
+
+const STDERR_CAP_BYTES: usize = 4 * 1024;
+const DEFAULT_TIMEOUT_MS: u64 = 5 * 60 * 1000; // 5 minutes
+const PROGRESS_INTERVAL_MS: u64 = 2000;
+
+fn resolve_cli_binary(app: &AppHandle) -> Result<PathBuf, ProcgenError> {
+    // Override for development + tests.
+    if let Ok(override_path) = std::env::var("THROUGHLINE_CLI_PATH") {
+        let p = PathBuf::from(override_path);
+        let abs = p
+            .canonicalize()
+            .map_err(|e| ProcgenError::new(ProcgenErrorKind::BinaryNotFound, e.to_string()))?;
+        return Ok(abs);
+    }
+    // Production bundle: bin/throughline-gen lives in the resource dir.
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        let candidate = resource_dir.join("bin").join("throughline-gen");
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+    // Dev mode: src-tauri/ is CWD; the repo's bin/ is one level up.
+    if let Ok(cwd) = std::env::current_dir() {
+        let mut walk = Some(cwd.as_path());
+        while let Some(dir) = walk {
+            let candidate = dir.join("bin").join("throughline-gen");
+            if candidate.exists() {
+                return Ok(candidate);
+            }
+            walk = dir.parent();
+        }
+    }
+    Err(ProcgenError::new(
+        ProcgenErrorKind::BinaryNotFound,
+        "Could not locate bin/throughline-gen in the resource dir or any parent of CWD",
+    ))
+}
+
+fn build_argv(bin_path: &Path, out_filename: &str, opts: &GenerateOpts) -> Vec<String> {
+    // First arg is the JS bin script; `node` is invoked separately.
+    let mut args: Vec<String> = Vec::with_capacity(20);
+    args.push(bin_path.to_string_lossy().into_owned());
+    args.push("--out".into());
+    args.push(out_filename.into());
+    if let Some(seed) = &opts.seed {
+        args.push("--seed".into());
+        args.push(seed.clone());
+    }
+    if let Some(acts) = opts.acts {
+        args.push("--acts".into());
+        args.push(acts.to_string());
+    }
+    if let Some(ppa) = opts.puzzles_per_act {
+        args.push("--puzzles-per-act".into());
+        args.push(ppa.to_string());
+    }
+    if opts.gentle.unwrap_or(false) {
+        args.push("--gentle".into());
+    }
+    if let Some(themes) = &opts.avoid_themes {
+        if !themes.is_empty() {
+            args.push("--avoid-themes".into());
+            args.push(themes.join(","));
+        }
+    }
+    if let Some(ms) = opts.llm_timeout_ms {
+        args.push("--llm-timeout-ms".into());
+        args.push(ms.to_string());
+    }
+    args
+}
+
+fn app_data_campaigns_dir(app: &AppHandle) -> Result<PathBuf, ProcgenError> {
+    let base = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| ProcgenError::new(ProcgenErrorKind::InternalError, e.to_string()))?;
+    let dir = base.join("campaigns");
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| ProcgenError::new(ProcgenErrorKind::InternalError, e.to_string()))?;
+    Ok(dir)
+}
+
+fn sanitize_seed_for_filename(seed: &Option<String>) -> String {
+    let raw = seed.as_deref().unwrap_or("anon");
+    raw.chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+        .take(64)
+        .collect()
+}
+
+async fn read_capped<R: AsyncReadExt + Unpin>(mut r: R, cap: usize) -> std::io::Result<Vec<u8>> {
+    let mut buf = Vec::with_capacity(cap.min(8192));
+    let mut chunk = [0u8; 4096];
+    loop {
+        let n = r.read(&mut chunk).await?;
+        if n == 0 {
+            break;
+        }
+        let remaining = cap.saturating_sub(buf.len());
+        if remaining == 0 {
+            // Drain (and drop) so the child doesn't block on a full pipe.
+            continue;
+        }
+        let take = remaining.min(n);
+        buf.extend_from_slice(&chunk[..take]);
+    }
+    Ok(buf)
+}
+
+// ─── Commands ───────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn generate_campaign(
+    app: AppHandle,
+    state: State<'_, ProcgenState>,
+    opts: GenerateOpts,
+) -> Result<GenerateOk, ProcgenError> {
+    let bin_path = resolve_cli_binary(&app)?;
+    let campaigns_dir = app_data_campaigns_dir(&app)?;
+    let unix_ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let seed_for_name = sanitize_seed_for_filename(&opts.seed);
+    let out_filename = format!("{}-{}.json", seed_for_name, unix_ts);
+    let seed_used = opts.seed.clone().unwrap_or_else(|| seed_for_name.clone());
+    let timeout_ms = u64::from(opts.llm_timeout_ms.unwrap_or(0))
+        .max(DEFAULT_TIMEOUT_MS / 2)
+        .min(DEFAULT_TIMEOUT_MS * 6);
+    let argv = build_argv(&bin_path, &out_filename, &opts);
+
+    // Spawn: Command::new("node") with each argv element discrete.
+    // shell: false (Rust Command never invokes a shell).
+    let mut cmd = Command::new("node");
+    cmd.args(&argv)
+        .current_dir(&campaigns_dir)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    #[cfg(windows)]
+    {
+        // Suppress the console-window flash on Windows.
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let child = cmd.spawn().map_err(|e| {
+        let kind = if e.kind() == std::io::ErrorKind::NotFound {
+            ProcgenErrorKind::BinaryNotFound
+        } else {
+            ProcgenErrorKind::SpawnFailed
+        };
+        ProcgenError::new(kind, e.to_string())
+    })?;
+
+    // Register job-handle.
+    let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(Some(child)));
+    {
+        let mut jobs = state.jobs.lock().await;
+        jobs.insert(opts.job_id.clone(), child_slot.clone());
+    }
+
+    let start = Instant::now();
+    let job_id_for_progress = opts.job_id.clone();
+    let app_for_progress = app.clone();
+    let child_slot_for_progress = child_slot.clone();
+
+    // Progress-emit task. Lives until the child slot empties or the
+    // overall timeout fires.
+    let progress_handle = tokio::spawn(async move {
+        loop {
+            sleep(Duration::from_millis(PROGRESS_INTERVAL_MS)).await;
+            // Cheap check: is the child still here?
+            let still_alive = {
+                let guard = child_slot_for_progress.lock().await;
+                guard.is_some()
+            };
+            if !still_alive {
+                break;
+            }
+            let payload = ProgressPayload {
+                job_id: job_id_for_progress.clone(),
+                phase: "running",
+                elapsed_ms: start.elapsed().as_millis().min(u128::from(u64::MAX)) as u64,
+            };
+            let _ = app_for_progress.emit("procgen:progress", payload);
+        }
+    });
+
+    // Race child wait against the timeout. We do the wait by hand
+    // because we need to keep the child inside the Mutex (so cancel
+    // can take it out from under us).
+    let wait_outcome = wait_or_timeout(child_slot.clone(), Duration::from_millis(timeout_ms)).await;
+    progress_handle.abort();
+
+    // Remove job-handle entry.
+    {
+        let mut jobs = state.jobs.lock().await;
+        jobs.remove(&opts.job_id);
+    }
+
+    let (exit_code, stdout_bytes, stderr_bytes) = match wait_outcome {
+        WaitOutcome::Exited {
+            exit_code,
+            stdout,
+            stderr,
+        } => (exit_code, stdout, stderr),
+        WaitOutcome::Cancelled => {
+            return Err(ProcgenError::new(
+                ProcgenErrorKind::Cancelled,
+                "generation cancelled",
+            ));
+        }
+        WaitOutcome::Timeout => {
+            return Err(ProcgenError::new(
+                ProcgenErrorKind::Timeout,
+                "generation exceeded the wall-clock timeout",
+            ));
+        }
+        WaitOutcome::IoError(msg) => {
+            return Err(ProcgenError::new(ProcgenErrorKind::InternalError, msg));
+        }
+    };
+
+    let stderr_sanitized = sanitize_stderr(&stderr_bytes);
+    let _ = stdout_bytes; // currently unused — CLI prints path on stdout
+
+    if exit_code != 0 {
+        return Err(
+            ProcgenError::new(ProcgenErrorKind::CliExit, "CLI exited non-zero")
+                .with_cli(exit_code, stderr_sanitized),
+        );
+    }
+
+    // Read the manifest file back from disk.
+    let out_path = campaigns_dir.join(&out_filename);
+    let manifest_json = tokio::fs::read_to_string(&out_path).await.map_err(|e| {
+        ProcgenError::new(
+            ProcgenErrorKind::FileReadFailed,
+            format!("could not read CLI output: {}", e),
+        )
+    })?;
+
+    Ok(GenerateOk {
+        path: out_path.to_string_lossy().into_owned(),
+        manifest_json,
+        elapsed_ms: start.elapsed().as_millis().min(u128::from(u64::MAX)) as u64,
+        seed_used,
+    })
+}
+
+enum WaitOutcome {
+    Exited {
+        exit_code: i32,
+        stdout: Vec<u8>,
+        stderr: Vec<u8>,
+    },
+    Cancelled,
+    Timeout,
+    IoError(String),
+}
+
+async fn wait_or_timeout(
+    child_slot: Arc<Mutex<Option<Child>>>,
+    budget: Duration,
+) -> WaitOutcome {
+    // Take ownership of the child's stdout/stderr pipes up front, so
+    // cancel can replace the child handle in the Mutex without
+    // confusing us.
+    let (stdout, stderr) = {
+        let mut guard = child_slot.lock().await;
+        let Some(child) = guard.as_mut() else {
+            return WaitOutcome::Cancelled;
+        };
+        let so = child.stdout.take();
+        let se = child.stderr.take();
+        (so, se)
+    };
+
+    let stdout_task = tokio::spawn(async move {
+        match stdout {
+            Some(s) => read_capped(s, usize::MAX).await.unwrap_or_default(),
+            None => Vec::new(),
+        }
+    });
+    let stderr_task = tokio::spawn(async move {
+        match stderr {
+            Some(s) => read_capped(s, STDERR_CAP_BYTES).await.unwrap_or_default(),
+            None => Vec::new(),
+        }
+    });
+
+    // Wait for the child's exit, racing against the timeout. Two
+    // clones of the Arc: one moved into the polling future, one
+    // retained for the post-timeout kill path.
+    let child_slot_for_wait = child_slot.clone();
+    let wait_fut = async move {
+        // Poll the slot until the child is gone (cancellation) or
+        // has exited.
+        loop {
+            let mut guard = child_slot_for_wait.lock().await;
+            match guard.as_mut() {
+                None => return None,
+                Some(child) => {
+                    // try_wait avoids holding the lock for the entire
+                    // wait — we re-lock between polls so cancel can
+                    // intervene.
+                    match child.try_wait() {
+                        Ok(Some(status)) => {
+                            *guard = None;
+                            return Some(Ok(status));
+                        }
+                        Ok(None) => {
+                            drop(guard);
+                            sleep(Duration::from_millis(50)).await;
+                        }
+                        Err(e) => {
+                            *guard = None;
+                            return Some(Err(e));
+                        }
+                    }
+                }
+            }
+        }
+    };
+    let exit_status = match tokio::time::timeout(budget, wait_fut).await {
+        Ok(Some(Ok(status))) => Some(status),
+        Ok(Some(Err(e))) => return WaitOutcome::IoError(e.to_string()),
+        Ok(None) => {
+            // Child was taken — cancellation.
+            return WaitOutcome::Cancelled;
+        }
+        Err(_) => {
+            // Timeout. Best-effort kill via the retained Arc.
+            let mut guard = child_slot.lock().await;
+            if let Some(child) = guard.as_mut() {
+                let _ = child.start_kill();
+            }
+            *guard = None;
+            return WaitOutcome::Timeout;
+        }
+    };
+
+    let stdout_bytes = stdout_task.await.unwrap_or_default();
+    let stderr_bytes = stderr_task.await.unwrap_or_default();
+    match exit_status {
+        Some(s) => {
+            let code = s.code().unwrap_or(-1);
+            WaitOutcome::Exited {
+                exit_code: code,
+                stdout: stdout_bytes,
+                stderr: stderr_bytes,
+            }
+        }
+        None => WaitOutcome::Cancelled,
+    }
+}
+
+#[tauri::command]
+pub async fn cancel_generation(
+    state: State<'_, ProcgenState>,
+    job_id: String,
+) -> Result<(), ProcgenError> {
+    let entry = {
+        let jobs = state.jobs.lock().await;
+        jobs.get(&job_id).cloned()
+    };
+    let Some(slot) = entry else {
+        // Cancelling a finished job is a no-op (architect §4.4).
+        return Ok(());
+    };
+    let mut guard = slot.lock().await;
+    if let Some(child) = guard.as_mut() {
+        let _ = child.start_kill();
+    }
+    *guard = None;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn read_campaign_file(
+    app: AppHandle,
+    path: String,
+) -> Result<String, ProcgenError> {
+    let resolved = PathBuf::from(&path);
+    let resolved = resolved
+        .canonicalize()
+        .map_err(|e| ProcgenError::new(ProcgenErrorKind::FileReadFailed, e.to_string()))?;
+    // Path-safety check: must sit inside the app data dir (campaigns
+    // subdir). The architect didn't strictly require this but the
+    // CLAUDE.md "manifest paths checked for traversal" invariant
+    // covers Phase 11's read surface too.
+    let base = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| ProcgenError::new(ProcgenErrorKind::InternalError, e.to_string()))?;
+    let base_canon = base.canonicalize().unwrap_or(base);
+    if !resolved.starts_with(&base_canon) {
+        return Err(ProcgenError::new(
+            ProcgenErrorKind::PathRejected,
+            "refused to read outside the app data dir",
+        ));
+    }
+    tokio::fs::read_to_string(&resolved)
+        .await
+        .map_err(|e| ProcgenError::new(ProcgenErrorKind::FileReadFailed, e.to_string()))
+}
