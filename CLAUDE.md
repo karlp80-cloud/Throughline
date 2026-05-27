@@ -13,15 +13,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phase 3 code complete; awaiting manual playtest.** Origin: https://github.com/karlp80-cloud/Throughline.
+**Phases 0–3 complete and playtest-approved.** Origin: https://github.com/karlp80-cloud/Throughline. Default route (`/`) mounts the editor; `?fixture=NAME` shows a static Phase-2 render.
 
-Phases 0–2 done. Phase 3 added a hand-written editor: pure reducer (`src/editor/state.ts`) + DOM layer (`src/editor/dom/{palette,opList,canvasInput}.ts`) + `mountEditor` entrypoint. Visit `npm run dev` → `/?editor=1` to playtest. Memo at [docs/architecture/editor.md](docs/architecture/editor.md).
+Two playtest-driven render fixes after the initial Phase 3 push:
+- Splitter / merger glyphs were too similar — redesigned as ⊢ / ⊣ T-shapes with an input-square / output-arrowhead marker (the marker is the disambiguator).
+- Rotation-symmetric tiles (filter hourglass, reactor hexagon) didn't show their facing — renderer now overlays a `facing_arrow` glyph for those.
 
-**Tally:** 175 unit tests (135 engine + 5 palette + 35 editor reducer) + 6 e2e (1 smoke + 4 renderer screenshot diffs + 1 editor construction). Tsc + lint clean. CI green at each push.
+**Tally:** 176 unit tests (135 engine + 5 palette + 35 editor reducer + 1 smoke) + 6 e2e (1 smoke + 4 renderer screenshot diffs + 1 editor construction). Tsc + lint clean. CI green at each push.
 
-**Pending:** 30-min manual playtest of the editor (light-cycle reviewer step). File a note in `docs/playtest/phase-3.md` per the plan if friction shows up.
-
-**Next:** Phase 4 — Playback Controls. Light cycle (architect notes on animation interpolation strategy + coder + manual feel review).
+**Next:** Phase 4 — Playback Controls. Light cycle. Animator interpolates between engine trace frames; play/pause/step/fast-forward UI.
 
 When a phase completes, update this section to point at the next phase.
 
