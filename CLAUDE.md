@@ -38,7 +38,9 @@ Phase 10 reviewer verdict: **PASS-WITH-NOTES**; full report in [docs/reviews/pha
 
 Live `claude -p` smoke run passed (2026-05-27, 21.8 s). Real subprocess → valid Zod-parsed manifest → solver-verified solvable. Re-run via `RUN_LIVE_LLM=1 npm run test:cli:live`.
 
-**Pending:** Phase 9 human-playtester review (carried forward).
+Phase 9 playtest closed (single-tester pass, log at [docs/playtest/tutorial-karlp.md](docs/playtest/tutorial-karlp.md)). 6/6 findings landed; root-cause for the "reactor does nothing" report turned out to be the editor's missing `recipe` field on placed reactor tiles, which also closed the Phase-9 filter-type gap. No mentor-copy changes were needed.
+
+**Pending:** none.
 
 **Next:** Phase 11 — E2E procgen integration (Tauri side spawns `throughline-gen`, surfaces progress, loads the produced manifest into the game). Moderate cycle.
 
