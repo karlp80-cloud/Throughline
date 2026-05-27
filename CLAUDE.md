@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phase 0 complete.** The skeleton (TypeScript + Vite + Vitest + Playwright + ESLint + Prettier + CI) is in place; one trivial Vitest and one trivial Playwright test pass. **Phase 1 is next** — the headless puzzle engine. See [IMPLEMENTATION_PLAN.md § Phase 1](IMPLEMENTATION_PLAN.md) for the Full-cycle plan (Architect → Coder → Reviewer with the verbatim engine-invariants checklist).
+**Phase 0 complete & shipped.** Skeleton (TS + Vite + Vitest + Playwright + ESLint + Prettier + GH Actions) green locally and on CI. Origin: https://github.com/karlp80-cloud/Throughline. **Phase 1 in progress** — currently in the Architect step (memo at `docs/architecture/engine.md`); no engine code yet. See [IMPLEMENTATION_PLAN.md § Phase 1](IMPLEMENTATION_PLAN.md) for the Full-cycle plan (Architect → Coder → Reviewer with the verbatim engine-invariants checklist).
 
 When a phase completes, update this section to point at the next phase.
 
