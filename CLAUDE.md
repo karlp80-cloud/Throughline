@@ -13,15 +13,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phases 0–6 complete; Phase 6 awaiting manual listening review.** Origin: https://github.com/karlp80-cloud/Throughline.
+**Phases 0–7 complete.** Origin: https://github.com/karlp80-cloud/Throughline.
 
-Phase 6 added `src/audio/`: a mock-injectable `AudioController` (10 unit tests), `WebAudioBackend` using raw Web Audio for SFX + Tone.js for chord-progression loops, an 8-SFX bank (tile place/rotate/delete, agent step, cargo grab/drop, success, failure), 12-name chord-progression map (Phase 8 will diverge them), and a two-slider Music/SFX mixer persisted to localStorage. Editor triggers SFX on tile diffs; playback triggers per-cycle SFX based on agent events + success/failure on finish. Memo at [docs/architecture/audio.md](docs/architecture/audio.md).
+Phase 7 added `src/schema/` (the canonical Zod schema for `campaign.json` — shared with Phase 10's CLI), `src/campaign/` (hash + storage + saves + state machine + DOM screens), and the built-in two-act demo at `campaigns/two-act.json`. Moderate cycle: architect memo at [docs/architecture/campaign-state.md](docs/architecture/campaign-state.md), TDD coder, fresh-context reviewer subagent signed off all seven checklist items (migration harness exercised, future-version refused, hash-mismatch warn+reset, corrupted JSON doesn't brick, narrative via `textContent`, schema `.strict()` + capped, DSL parse at load time).
 
-**Tally:** 288 unit tests (+10 audio over Phase 5) + 9 e2e. Tsc + lint clean. CI green at each push.
+Default route (`/`) now mounts the campaign harness: main menu → act intro → hub → puzzle → act outro → ending. Soft-resume: re-selecting a partly-completed campaign jumps to the first incomplete act's intro.
 
-**Pending:** Phase 6 manual listening checkpoint — `npm run dev`, click around, hit Run, eyeball / earball the SFX + loop. File a note in `docs/playtest/phase-6.md` if anything's too loud, too dry, or too samey.
+**Tally:** 334 unit (135 engine + 5 palette + 35 editor + 22 animator + 71 DSL + 9 detector + 10 audio + 46 campaign + 1 smoke) + 10 e2e (smoke + 4 renderer screenshots + 1 editor + 2 playback + 1 completion + 1 campaign). Tsc + lint clean. CI green at each push.
 
-**Next:** Phase 7 — Campaign State + Library. **Moderate cycle** (Architect → Coder → Reviewer focused on save/load migration safety; the Zod schema for `campaign.json` lives here and is shared with Phase 10's CLI).
+**Next:** Phase 8 — Theme Applicator. **Moderate cycle** — apply `campaign.theme` at runtime: palette → CSS variables, glyph variants from a fixed library, vocabulary substitution. Reviewer focuses on no-un-substituted-tokens + WCAG contrast floor + HTML escape.
 
 When a phase completes, update this section to point at the next phase.
 
