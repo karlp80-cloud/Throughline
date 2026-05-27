@@ -13,15 +13,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phases 0–5 complete.** Origin: https://github.com/karlp80-cloud/Throughline.
+**Phases 0–6 complete; Phase 6 awaiting manual listening review.** Origin: https://github.com/karlp80-cloud/Throughline.
 
-Phase 5 added the rule DSL (`src/dsl/`) + completion detector (`src/completion/`) + post-victory results panel. Full cycle: architect memo at [docs/architecture/rule-dsl.md](docs/architecture/rule-dsl.md), TDD coder, fresh-context reviewer subagent signed off all five checklist items (fuzz coverage real, every AST kind tested, no-eval canary catches `eval`/`Function`, no innerHTML in DSL/completion DOM, closed identifier set enforced at parse time).
+Phase 6 added `src/audio/`: a mock-injectable `AudioController` (10 unit tests), `WebAudioBackend` using raw Web Audio for SFX + Tone.js for chord-progression loops, an 8-SFX bank (tile place/rotate/delete, agent step, cargo grab/drop, success, failure), 12-name chord-progression map (Phase 8 will diverge them), and a two-slider Music/SFX mixer persisted to localStorage. Editor triggers SFX on tile diffs; playback triggers per-cycle SFX based on agent events + success/failure on finish. Memo at [docs/architecture/audio.md](docs/architecture/audio.md).
 
-Grammar choices locked: non-associative cmpExpr, integer division (div-by-zero → eval error), case-sensitive identifiers from `{cycles, tiles_used, agent_count, ops_total}`, unary `-` in the grammar, fail-closed boundary for eval errors and non-boolean roots.
+**Tally:** 288 unit tests (+10 audio over Phase 5) + 9 e2e. Tsc + lint clean. CI green at each push.
 
-**Tally:** 278 unit tests (135 engine + 5 palette + 35 editor + 22 animator + 71 DSL + 9 detector + 1 smoke) + 9 e2e (smoke + 4 renderer screenshots + 1 editor + 2 playback + 1 completion). Tsc + lint clean. CI green at each push.
+**Pending:** Phase 6 manual listening checkpoint — `npm run dev`, click around, hit Run, eyeball / earball the SFX + loop. File a note in `docs/playtest/phase-6.md` if anything's too loud, too dry, or too samey.
 
-**Next:** Phase 6 — Audio. Light cycle (Tone.js loops + Web Audio SFX; manual listening review).
+**Next:** Phase 7 — Campaign State + Library. **Moderate cycle** (Architect → Coder → Reviewer focused on save/load migration safety; the Zod schema for `campaign.json` lives here and is shared with Phase 10's CLI).
 
 When a phase completes, update this section to point at the next phase.
 
