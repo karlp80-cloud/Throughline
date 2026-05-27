@@ -7,6 +7,7 @@
  * Each entry is the raw JSON; `parseCampaign` validates on use.
  */
 
+import alchemyJson from '../../campaigns/alchemy-demo.json';
 import twoActJson from '../../campaigns/two-act.json';
 
 export interface BuiltInCampaign {
@@ -20,5 +21,10 @@ export const BUILT_IN_CAMPAIGNS: readonly BuiltInCampaign[] = [
     id: 'demo-two-act',
     displayName: 'The Workshop (demo, 2 acts)',
     manifest: twoActJson,
+  },
+  {
+    id: 'demo-alchemy',
+    displayName: 'The Aetherium Distillery (themed, 1 act)',
+    manifest: alchemyJson,
   },
 ];

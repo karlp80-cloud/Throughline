@@ -8,9 +8,9 @@
  * See docs/architecture/audio.md.
  */
 
-import { DEFAULT_PROGRESSION } from './progressions';
+import { DEFAULT_PROGRESSION, PROGRESSIONS } from './progressions';
 import { SFX } from './sfxBank';
-import type { AudioBackend, LoopName, SfxName } from './types';
+import type { AudioBackend, ChordProgression, LoopName, SfxName } from './types';
 
 function clamp01(v: number): number {
   if (v < 0) return 0;
@@ -22,6 +22,7 @@ export class AudioController {
   private musicVolume = 1;
   private sfxVolume = 0.7;
   private activeLoops = new Set<LoopName>();
+  private currentProgression: ChordProgression = DEFAULT_PROGRESSION;
 
   constructor(private readonly backend: AudioBackend) {
     // Push the initial volumes so the backend's internal gain nodes
@@ -56,8 +57,36 @@ export class AudioController {
       this.backend.stopLoop(playing);
       this.activeLoops.delete(playing);
     }
-    this.backend.startLoop(name, DEFAULT_PROGRESSION);
+    this.backend.startLoop(name, this.currentProgression);
     this.activeLoops.add(name);
+  }
+
+  /**
+   * Switch the active chord progression. If a loop is currently
+   * playing, restart it on the new progression so the change is
+   * audible immediately. Phase 8's theme applier calls this when
+   * applying a theme with a `progression_name`.
+   *
+   * Unknown names fall back to DEFAULT_PROGRESSION and return false.
+   */
+  setProgressionByName(name: string): boolean {
+    const progression = PROGRESSIONS[name];
+    if (!progression) {
+      this.currentProgression = DEFAULT_PROGRESSION;
+      return false;
+    }
+    this.currentProgression = progression;
+    // Restart any active loops on the new progression.
+    const wasPlaying = Array.from(this.activeLoops);
+    for (const loop of wasPlaying) {
+      this.backend.stopLoop(loop);
+    }
+    this.activeLoops.clear();
+    for (const loop of wasPlaying) {
+      this.backend.startLoop(loop, this.currentProgression);
+      this.activeLoops.add(loop);
+    }
+    return true;
   }
 
   stopLoop(name: LoopName): void {

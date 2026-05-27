@@ -28,15 +28,35 @@ import { paletteColor } from './palette';
 export const CELL_SIZE = 48;
 
 // Precomputed Path2D per glyph, lazily built on first render in a
-// browser/jsdom context (Path2D isn't available in plain Node).
+// browser/jsdom context (Path2D isn't available in plain Node, so
+// we never construct Path2D unless we know we're about to render).
 let glyphPaths: Map<GlyphKey, Path2D> | null = null;
+// Pending path-data strings to honor on the next ensureGlyphPaths().
+// Either the default GLYPHS map or theme-resolved overrides.
+let pendingPathData: Readonly<Record<GlyphKey, string>> | null = null;
 
 function ensureGlyphPaths(): void {
-  if (glyphPaths !== null) return;
+  if (glyphPaths !== null && pendingPathData === null) return;
+  const source = pendingPathData ?? GLYPHS;
   glyphPaths = new Map();
-  for (const [key, d] of Object.entries(GLYPHS) as [GlyphKey, string][]) {
+  for (const [key, d] of Object.entries(source) as [GlyphKey, string][]) {
     glyphPaths.set(key, new Path2D(d));
   }
+  pendingPathData = null;
+}
+
+/**
+ * Replace the renderer's glyph cache with theme-resolved overrides.
+ * Call with `null` to revert to the default `GLYPHS` map.
+ *
+ * Path2D construction is deferred to the next `render()` call so
+ * Node-environment tests (no Path2D) can still call the applier.
+ */
+export function setGlyphPathOverrides(pathsByKey: Readonly<Record<GlyphKey, string>> | null): void {
+  // Invalidate the cache; next ensureGlyphPaths rebuilds from
+  // pendingPathData (or GLYPHS if null).
+  glyphPaths = null;
+  pendingPathData = pathsByKey;
 }
 
 export function canvasSizeFor(puzzle: Puzzle): { width: number; height: number } {

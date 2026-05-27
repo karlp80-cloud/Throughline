@@ -16,6 +16,7 @@ import { AudioController, mountVolumeMixer, WebAudioBackend } from './audio';
 import { mountCampaignHarness, type CampaignHarnessHandle } from './campaign/dom/harness';
 import type { EditorHandle } from './editor';
 import type { PlaybackHandle } from './playback';
+import type { AppliedTheme } from './theme';
 
 declare global {
   interface Window {
@@ -28,6 +29,12 @@ declare global {
      */
     __editor?: EditorHandle;
     __playback?: PlaybackHandle;
+    /**
+     * Read-through of the campaign harness's current applied theme.
+     * Refreshed by the harness on every state change; null in
+     * main_menu.
+     */
+    __theme?: AppliedTheme | null;
   }
 }
 

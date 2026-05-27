@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "seed": "alchemydemo",
+  "theme": {
+    "name": "The Aetherium Distillery",
+    "setting_summary": "A small alchemical workshop. Practice routing essence between alembics.",
+    "palette": {
+      "bg": "#1a1820",
+      "surface": "#241f29",
+      "fg": "#e8d8b0",
+      "muted": "#7a6a55",
+      "accent": "#c87650",
+      "success": "#82c08a",
+      "danger": "#d06060"
+    },
+    "glyphs": {
+      "input": "alchemy.input",
+      "output": "alchemy.output",
+      "tile_conveyor": "alchemy.tile_conveyor",
+      "tile_splitter": "alchemy.tile_splitter",
+      "tile_merger": "alchemy.tile_merger",
+      "tile_filter": "alchemy.tile_filter",
+      "tile_reactor": "alchemy.tile_reactor"
+    },
+    "vocabulary": {
+      "essence": "essence",
+      "alembic": "alembic",
+      "phial": "phial"
+    },
+    "progression_name": "alchemy_mystical"
+  },
+  "acts": [
+    {
+      "id": "act1",
+      "title": "First Distillation",
+      "intro_text": "The alembic warms. Lead {{essence}} through the runic lattice to the awaiting {{phial}}.",
+      "outro_text": "The {{phial}} fills. The work is begun.",
+      "required_completions": 1,
+      "puzzles": [
+        {
+          "id": "a1_p1",
+          "title": "Lead {{essence}} to {{phial}}",
+          "briefing": "Route {{essence}} from the {{alembic}} on the left to the {{phial}} on the right.",
+          "grid": { "w": 5, "h": 3 },
+          "inputs": [{ "pos": [0, 1], "emits": ["alpha"], "rate": 1 }],
+          "outputs": [{ "pos": [4, 1], "required": [{ "type": "alpha", "count": 2 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 8, "max_cycles": 30 },
+          "optional_challenges": []
+        }
+      ]
+    }
+  ],
+  "ending": {
+    "good": "The {{essence}} flows. The mentor nods, and you understand the {{phial}} a little better than before.",
+    "neutral": "The work is done, for now."
+  }
+}
