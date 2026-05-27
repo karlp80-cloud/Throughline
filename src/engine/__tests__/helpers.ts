@@ -117,6 +117,7 @@ export interface PuzzleOverrides {
   availableTiles?: readonly TileKind[];
   availableOps?: readonly Op['kind'][];
   constraints?: Partial<PuzzleConstraints>;
+  optionalChallenges?: readonly import('../types').OptionalChallenge[];
 }
 
 export function makePuzzle(o: PuzzleOverrides = {}): Puzzle {
@@ -138,6 +139,7 @@ export function makePuzzle(o: PuzzleOverrides = {}): Puzzle {
       maxTiles: o.constraints?.maxTiles ?? 40,
       maxCycles: o.constraints?.maxCycles ?? 250,
     },
+    optionalChallenges: o.optionalChallenges ?? [],
   };
 }
 

@@ -150,6 +150,7 @@ describe('conservation property', () => {
         'SENSE' as const,
       ],
       constraints: { maxTiles: 4, maxCycles: 30 },
+      optionalChallenges: [],
     };
     const solution = {
       tiles: [],
@@ -174,6 +175,7 @@ describe('conservation property', () => {
       availableTiles: [] as const,
       availableOps: ['WAIT' as const],
       constraints: { maxTiles: 0, maxCycles: 10 },
+      optionalChallenges: [],
     };
     const solution = {
       tiles: [],

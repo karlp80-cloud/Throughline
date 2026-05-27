@@ -102,6 +102,13 @@ export interface PuzzleConstraints {
   readonly maxCycles: number;
 }
 
+export interface OptionalChallenge {
+  readonly id: string;
+  readonly label: string;
+  /** Rule DSL expression (see docs/architecture/rule-dsl.md). */
+  readonly rule: string;
+}
+
 export interface Puzzle {
   readonly id: string;
   readonly grid: { readonly w: number; readonly h: number };
@@ -112,6 +119,8 @@ export interface Puzzle {
   readonly availableTiles: readonly TileKind[];
   readonly availableOps: readonly Op['kind'][];
   readonly constraints: PuzzleConstraints;
+  /** Optional challenges; each has a rule DSL string evaluated post-victory. */
+  readonly optionalChallenges: readonly OptionalChallenge[];
 }
 
 // ─── Player solution ───────────────────────────────────────────────

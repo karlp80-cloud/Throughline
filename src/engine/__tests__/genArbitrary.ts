@@ -183,6 +183,7 @@ export function buildScenario(spec: ScenarioSpec): { puzzle: Puzzle; solution: S
     availableTiles: ['conveyor', 'splitter', 'merger', 'filter', 'reactor'],
     availableOps: ['MOVE', 'GRAB', 'DROP', 'WAIT', 'SENSE'],
     constraints: { maxTiles: 40, maxCycles: 30 },
+    optionalChallenges: [],
   };
 
   return { puzzle, solution: { tiles, paths, programs } };

@@ -13,6 +13,8 @@
  */
 
 import { mountCanvas } from '../app/canvasMount';
+import { detectCompletion } from '../completion/detector';
+import { mountResultsPanel, type ResultsPanelHandle } from '../completion/dom/resultsPanel';
 import { initialWorld, runUntilHalt } from '../engine';
 import type { Puzzle, Solution } from '../engine';
 import { render } from '../render/renderer';
@@ -43,7 +45,8 @@ export function mountPlayback(
   container.replaceChildren();
   const controlsEl = document.createElement('div');
   const canvasContainer = document.createElement('div');
-  container.append(controlsEl, canvasContainer);
+  const resultsEl = document.createElement('div');
+  container.append(controlsEl, canvasContainer, resultsEl);
 
   const canvas = mountCanvas(canvasContainer, puzzle, solution, init);
   const ctx = canvas.getContext('2d');
@@ -82,7 +85,23 @@ export function mountPlayback(
 
   // Repaint immediately on any animator update from a non-tick source
   // (manual step, reset, etc.).
-  const offUpdate = animator.onUpdate(paint);
+  // Also mount the results panel on transition into 'finished'.
+  let resultsPanel: ResultsPanelHandle | null = null;
+  let lastStatus = animator.status();
+  const offUpdate = animator.onUpdate(() => {
+    paint();
+    const s = animator.status();
+    if (s === 'finished' && lastStatus !== 'finished') {
+      const completion = detectCompletion(puzzle, solution, result.trace);
+      resultsPanel = mountResultsPanel(resultsEl, completion, animator.haltStatus());
+    } else if (s !== 'finished' && lastStatus === 'finished') {
+      // e.g. reset back to idle — clear the panel
+      resultsPanel?.destroy();
+      resultsPanel = null;
+      resultsEl.replaceChildren();
+    }
+    lastStatus = s;
+  });
 
   return {
     animator: () => animator,
@@ -90,6 +109,7 @@ export function mountPlayback(
       cancelAnimationFrame(rafId);
       offUpdate();
       controls.destroy();
+      resultsPanel?.destroy();
       container.replaceChildren();
     },
   };

@@ -24,6 +24,7 @@ export type {
   EngineStatus,
   InputSpec,
   Op,
+  OptionalChallenge,
   OutputRequirement,
   OutputSpec,
   PlacedTile,

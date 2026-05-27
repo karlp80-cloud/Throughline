@@ -47,6 +47,10 @@ export const FIXTURES: Readonly<Record<string, RenderFixture>> = {
       outputs: [{ pos: [4, 1], required: [{ type: 'alpha', count: 3 }] }],
       agents: [{ id: 'a1', startPos: [2, 0] }],
       constraints: { maxTiles: 8, maxCycles: 30 },
+      optionalChallenges: [
+        { id: 'opt_fast', label: 'Solve in <10 cycles', rule: 'cycles < 10' },
+        { id: 'opt_lean', label: 'Use ≤4 tiles', rule: 'tiles_used <= 4' },
+      ],
     }),
     solution: makeSolution(
       [conveyor([0, 1], 'E'), conveyor([1, 1], 'E'), conveyor([2, 1], 'E'), conveyor([3, 1], 'E')],
