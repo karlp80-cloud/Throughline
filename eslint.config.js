@@ -12,6 +12,7 @@ export default tseslint.config(
       'test-results/**',
       'coverage/**',
       'cli/test-fixtures/**',
+      'src-tauri/target/**',
     ],
   },
   ...tseslint.configs.recommended,

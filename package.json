@@ -21,15 +21,18 @@
     "pretest:e2e": "npm run build",
     "test:e2e": "playwright test",
     "test:cli:live": "vitest run --config vitest.integration.config.ts",
+    "tauri": "tauri",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.0",
     "tone": "^15.0.4",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
+    "@tauri-apps/cli": "^2.11.2",
     "@types/node": "^25.9.1",
     "@vitest/ui": "^2.1.0",
     "eslint": "^9.13.0",

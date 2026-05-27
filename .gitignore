@@ -25,6 +25,8 @@ Thumbs.db
 
 # Tauri (will be populated in Phase 11+)
 src-tauri/target/
+# Tauri-generated capability schemas (regenerated at build time).
+src-tauri/gen/
 
 # Local Claude Code state
 .claude/settings.local.json
