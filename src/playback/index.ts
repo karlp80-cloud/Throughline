@@ -38,6 +38,7 @@ export function mountPlayback(
   solution: Solution,
   onReset: () => void,
   audio?: AudioController,
+  onReturnToHub?: () => void,
 ): PlaybackHandle {
   const result = runUntilHalt(puzzle, solution);
   const init = initialWorld(puzzle);
@@ -110,7 +111,12 @@ export function mountPlayback(
     const s = animator.status();
     if (s === 'finished' && lastStatus !== 'finished') {
       const completion = detectCompletion(puzzle, solution, result.trace);
-      resultsPanel = mountResultsPanel(resultsEl, completion, animator.haltStatus());
+      resultsPanel = mountResultsPanel(
+        resultsEl,
+        completion,
+        animator.haltStatus(),
+        onReturnToHub ? { onReturnToHub } : {},
+      );
       if (audio) {
         audio.playSfx(animator.haltStatus() === 'victory' ? 'success' : 'failure');
       }

@@ -49,7 +49,7 @@ import type {
   TileState,
   WorldState,
 } from './types';
-import { fromPosKey, posKey } from './types';
+import { fromPosKey, neighbor, posKey } from './types';
 
 // ─── Mutable draft (internal only) ─────────────────────────────────
 interface DraftWorld {
@@ -165,6 +165,22 @@ export function stepOnce(
     allTileIntents.push(...tileIntents(tile, snapshot));
   }
 
+  // Input auto-eject intents — declared in Phase A but APPLIED later
+  // (in Phase B, after agent GRAB/DROP) so an agent positioned AT
+  // the input cell can grab the freshly-emitted cargo before it
+  // ejects. Without this deferral, the auto-eject would steal cargo
+  // out from under any agent waiting to grab.
+  const autoEjectIntents: TileIntent[] = [];
+  for (const input of puzzle.inputs) {
+    const facing = input.facing ?? 'E';
+    const here = snapshot.cargoOnTiles[posKey(input.pos)];
+    if (!here || here.length === 0) continue;
+    const to = neighbor(input.pos, facing);
+    for (const c of here.slice().sort((a, b) => a.id - b.id)) {
+      autoEjectIntents.push({ kind: 'moveCargo', cargo: c, from: input.pos, to });
+    }
+  }
+
   // ─── Phase A: agent intents (sorted by AgentId for determinism) ─
   const sortedAgentIds = puzzle.agents
     .map((a) => a.id)
@@ -261,6 +277,13 @@ export function stepOnce(
       blocked: info.blocked,
     });
   }
+
+  // ─── Phase B (continued): input auto-eject ──────────────────────
+  // Any cargo still on input cells (i.e. NOT grabbed by an agent or
+  // moved by a tile placed at the input) gets ejected one step in
+  // the input's facing direction. Applied AFTER agent GRAB so an
+  // agent at the input always wins.
+  applyTileIntents(draft, autoEjectIntents, puzzle);
 
   // ─── Phase C: DELIVER ───────────────────────────────────────────
   const deliveries: DeliveryEvent[] = [];

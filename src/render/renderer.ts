@@ -353,8 +353,16 @@ function paintCargoAtCellFraction(
   cargo: CargoInstance,
   opacity: number,
 ): void {
-  const cx = gx * CELL_SIZE + CELL_SIZE / 2;
-  const cy = gy * CELL_SIZE + CELL_SIZE / 2;
+  // Per-id offset around cell center so cargo arriving at the same
+  // cell from different sources don't perfectly overlap and look
+  // like a single piece. 8 slots around a 4px ring is enough
+  // resolution to disambiguate the typical 2-3 cargo case.
+  const angle = (cargo.id % 8) * (Math.PI / 4);
+  const r = 4;
+  const offX = Math.cos(angle) * r;
+  const offY = Math.sin(angle) * r;
+  const cx = gx * CELL_SIZE + CELL_SIZE / 2 + offX;
+  const cy = gy * CELL_SIZE + CELL_SIZE / 2 + offY;
   ctx.save();
   ctx.globalAlpha = opacity;
   paintCargoDot(ctx, cx, cy, cargo);
@@ -391,13 +399,43 @@ function paintCargoDot(
   cy: number,
   cargo: CargoInstance,
 ): void {
+  const px = snap(cx);
+  const py = snap(cy);
   ctx.fillStyle = cargoColor(cargo.type);
   ctx.strokeStyle = paletteColor('bg');
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(snap(cx), snap(cy), 7, 0, Math.PI * 2);
+  ctx.arc(px, py, 8, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
+  // Type initial inside the dot — makes alpha / beta / gamma trivially
+  // distinguishable even when their auto-assigned hues are close.
+  const letter = cargoLetter(cargo.type);
+  if (letter) {
+    ctx.fillStyle = paletteColor('bg');
+    ctx.font = 'bold 10px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(letter, px, py + 0.5);
+  }
+}
+
+/** Greek-letter shorthand for common cargo names; falls back to first char. */
+function cargoLetter(type: string): string {
+  switch (type) {
+    case 'alpha':
+      return 'α';
+    case 'beta':
+      return 'β';
+    case 'gamma':
+      return 'γ';
+    case 'delta':
+      return 'δ';
+    case 'epsilon':
+      return 'ε';
+    default:
+      return type.charAt(0).toUpperCase();
+  }
 }
 
 function drawAgents(

@@ -28,8 +28,10 @@ const MUSIC_BASE_ATTENUATION_DB = -6;
 interface ActiveLoop {
   padPattern: Tone.Pattern<string[]>;
   pluckPattern: Tone.Pattern<string>;
+  bassPattern: Tone.Pattern<string>;
   pad: Tone.PolySynth;
   pluck: Tone.Synth;
+  bass: Tone.MonoSynth;
   volume: Tone.Volume;
 }
 
@@ -104,6 +106,22 @@ export class WebAudioBackend implements AudioBackend {
       envelope: { attack: 0.005, decay: 0.18, sustain: 0.05, release: 0.3 },
     }).connect(volume);
 
+    // Bass layer: holds the root of each chord one octave below the
+    // pad's lowest voice. Triangle wave with a low-pass filter via
+    // MonoSynth gives weight without muddying the mids.
+    const bass = new Tone.MonoSynth({
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.02, decay: 0.4, sustain: 0.4, release: 0.6 },
+      filterEnvelope: {
+        attack: 0.05,
+        decay: 0.4,
+        sustain: 0.3,
+        release: 0.5,
+        baseFrequency: 200,
+        octaves: 2,
+      },
+    }).connect(volume);
+
     // Pad walks the chords at 2n (half note).
     const padEvents: string[][] = progression.map((c) => c.notes.slice());
     const padPattern = new Tone.Pattern<string[]>(
@@ -136,7 +154,30 @@ export class WebAudioBackend implements AudioBackend {
     pluckPattern.interval = '8n';
     pluckPattern.start(0);
 
-    this.active.set(name, { padPattern, pluckPattern, pad, pluck, volume });
+    // Bass: root note of each chord, dropped one octave so it sits
+    // below the pad. Drives the on-the-beat pulse the chord pad
+    // alone doesn't quite carry.
+    const bassEvents: string[] = progression.map((c) => octaveDown(c.notes[0] ?? 'A3'));
+    const bassPattern = new Tone.Pattern<string>(
+      (time, note) => {
+        if (!note) return;
+        bass.triggerAttackRelease(note, '2n', time, 0.45);
+      },
+      bassEvents,
+      'up',
+    );
+    bassPattern.interval = '2n';
+    bassPattern.start(0);
+
+    this.active.set(name, {
+      padPattern,
+      pluckPattern,
+      bassPattern,
+      pad,
+      pluck,
+      bass,
+      volume,
+    });
   }
 
   stopLoop(name: LoopName): void {
@@ -146,9 +187,12 @@ export class WebAudioBackend implements AudioBackend {
     a.padPattern.dispose();
     a.pluckPattern.stop();
     a.pluckPattern.dispose();
+    a.bassPattern.stop();
+    a.bassPattern.dispose();
     a.pad.releaseAll();
     a.pad.dispose();
     a.pluck.dispose();
+    a.bass.dispose();
     a.volume.dispose();
     this.active.delete(name);
   }
@@ -178,4 +222,14 @@ export class WebAudioBackend implements AudioBackend {
     if (this.musicUserDb <= -55) return -60;
     return this.musicUserDb + MUSIC_BASE_ATTENUATION_DB;
   }
+}
+
+/** Drop a scientific-pitch note one octave (`A3` → `A2`). */
+function octaveDown(note: string): string {
+  // Note format is letter(+accidental)?octave, e.g. "A3", "F#3", "Bb4".
+  const m = note.match(/^([A-G][#b]?)(\d+)$/);
+  if (!m) return note;
+  const pitch = m[1]!;
+  const oct = parseInt(m[2]!, 10);
+  return `${pitch}${Math.max(0, oct - 1)}`;
 }

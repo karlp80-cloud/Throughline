@@ -42,11 +42,15 @@ const Theme = z
 
 const Pos = z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()]);
 
+const Direction = z.enum(['N', 'E', 'S', 'W']);
+
 const InputSpec = z
   .object({
     pos: Pos,
     emits: z.array(z.string().min(1).max(40)).min(1).max(8),
     rate: z.number().int().min(1).max(64),
+    /** Direction the input auto-ejects cargo. Defaults to 'E'. */
+    facing: Direction.optional(),
   })
   .strict();
 

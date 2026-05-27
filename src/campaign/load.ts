@@ -16,6 +16,7 @@ export function toEnginePuzzle(p: RawPuzzle): Puzzle {
       pos: i.pos,
       emits: i.emits,
       rate: i.rate,
+      ...(i.facing ? { facing: i.facing } : {}),
     })),
     outputs: p.outputs.map((o) => ({
       pos: o.pos,

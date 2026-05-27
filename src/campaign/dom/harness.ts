@@ -426,7 +426,7 @@ function renderPuzzle(
 
   const sessionEl = document.createElement('div');
   container.appendChild(sessionEl);
-  const session = mountPuzzleSession(sessionEl, toEnginePuzzle(raw), { onVictory }, audio);
+  const session = mountPuzzleSession(sessionEl, toEnginePuzzle(raw), { onVictory, onLeave }, audio);
   registerSession(session);
 }
 

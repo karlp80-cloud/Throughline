@@ -25,6 +25,11 @@ export interface PuzzleSessionCallbacks {
    * record earned optionals.
    */
   readonly onVictory?: (optionals: readonly ChallengeResult[]) => void;
+  /**
+   * Fires when the player clicks "Back to hub" in the results panel.
+   * The harness routes this to a LEAVE_PUZZLE dispatch.
+   */
+  readonly onLeave?: () => void;
 }
 
 export interface PuzzleSessionHandle {
@@ -83,7 +88,14 @@ export function mountPuzzleSession(
     editorHandle = null;
     if (typeof window !== 'undefined') delete window.__editor;
     audio?.startLoop('puzzle');
-    const handle = mountPlayback(sub, puzzle, lastDraft, () => switchToEdit(), audio);
+    const handle = mountPlayback(
+      sub,
+      puzzle,
+      lastDraft,
+      () => switchToEdit(),
+      audio,
+      callbacks.onLeave,
+    );
     playbackHandle = handle;
     if (typeof window !== 'undefined') window.__playback = handle;
     runBtn.disabled = true;

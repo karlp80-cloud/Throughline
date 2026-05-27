@@ -15,17 +15,44 @@ import {
 
 // ─── Phase 0: EMIT ─────────────────────────────────────────────────
 describe('emission', () => {
-  test('input with rate=1 emits at cycle 0', () => {
+  test('input with rate=1 emits at cycle 0 and auto-ejects east', () => {
     const puzzle = makePuzzle({
       grid: { w: 3, h: 1 },
       inputs: [{ pos: [0, 0], emits: ['alpha'], rate: 1 }],
     });
     const { world, trace } = stepOnce(puzzle, makeSolution(), makeWorld());
     expect(trace.emissions).toEqual([{ inputPos: [0, 0], cargo: { id: 0, type: 'alpha' } }]);
-    expect(world.cargoOnTiles[posKey([0, 0])]).toEqual([{ id: 0, type: 'alpha' }]);
+    // Input auto-ejects: cargo ends up at the cell east of the input,
+    // not at the input cell itself.
+    expect(world.cargoOnTiles[posKey([0, 0])]).toBeUndefined();
+    expect(world.cargoOnTiles[posKey([1, 0])]).toEqual([{ id: 0, type: 'alpha' }]);
     expect(world.cumulativeEmissions).toBe(1);
     expect(world.nextCargoId).toBe(1);
     expect(world.cycle).toBe(1);
+  });
+
+  test('input auto-eject respects the input.facing direction', () => {
+    const puzzle = makePuzzle({
+      grid: { w: 3, h: 3 },
+      inputs: [{ pos: [1, 1], emits: ['alpha'], rate: 1, facing: 'S' }],
+    });
+    const { world } = stepOnce(puzzle, makeSolution(), makeWorld());
+    expect(world.cargoOnTiles[posKey([1, 2])]).toEqual([{ id: 0, type: 'alpha' }]);
+  });
+
+  test('input auto-eject does NOT fire when an agent at the input grabs the cargo', () => {
+    const puzzle = makePuzzle({
+      grid: { w: 3, h: 1 },
+      inputs: [{ pos: [0, 0], emits: ['alpha'], rate: 1 }],
+      agents: [{ id: 'a1', startPos: [0, 0] }],
+    });
+    const solution = makeSolution([], { a1: [[0, 0]] }, { a1: [{ kind: 'GRAB' }] });
+    const world = makeWorld({ agents: { a1: agentState([0, 0]) } });
+    const { world: w2 } = stepOnce(puzzle, solution, world);
+    expect(w2.agents['a1']?.carrying).toEqual({ id: 0, type: 'alpha' });
+    // Cargo grabbed by the agent — neither at input nor at neighbor.
+    expect(w2.cargoOnTiles[posKey([0, 0])]).toBeUndefined();
+    expect(w2.cargoOnTiles[posKey([1, 0])]).toBeUndefined();
   });
 
   test('input with rate=2 does NOT emit at cycle 1', () => {

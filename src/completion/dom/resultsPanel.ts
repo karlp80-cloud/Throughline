@@ -16,10 +16,20 @@ export interface ResultsPanelHandle {
   destroy(): void;
 }
 
+export interface ResultsPanelOptions {
+  /**
+   * When set, the panel shows a primary action button that fires
+   * this callback. The campaign harness uses this to return the
+   * player to the hub after a victory.
+   */
+  readonly onReturnToHub?: () => void;
+}
+
 export function mountResultsPanel(
   container: HTMLElement,
   result: CompletionResult,
   haltStatus: 'victory' | 'cycle_limit_exceeded' | 'agent_deadlock',
+  opts: ResultsPanelOptions = {},
 ): ResultsPanelHandle {
   container.classList.add('results');
   container.style.cssText = `
@@ -83,6 +93,21 @@ export function mountResultsPanel(
       list.appendChild(row);
     }
     container.appendChild(list);
+  }
+
+  if (opts.onReturnToHub) {
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.dataset['role'] = 'results-back-to-hub';
+    back.textContent = '← Back to hub';
+    back.style.cssText = `
+      margin-top: 12px; padding: 6px 14px;
+      background: var(--accent); color: var(--bg);
+      border: 1px solid var(--accent); border-radius: 4px;
+      cursor: pointer; font: inherit; font-weight: 600;
+    `;
+    back.addEventListener('click', () => opts.onReturnToHub?.());
+    container.appendChild(back);
   }
 
   return {

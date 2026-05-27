@@ -85,6 +85,14 @@ export interface InputSpec {
   readonly emits: readonly CargoType[];
   /** Emits when `cycle % rate === 0`. Must be >= 1. */
   readonly rate: number;
+  /**
+   * Direction the input auto-ejects emitted cargo. The input cell
+   * acts as an implicit conveyor in this direction: cargo emitted
+   * at the input cell moves one step in `facing` on the same cycle,
+   * so players don't need to place a tile at the input cell to
+   * "free" the cargo. Defaults to 'E'.
+   */
+  readonly facing?: Direction;
 }
 
 export interface OutputRequirement {

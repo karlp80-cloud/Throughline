@@ -748,7 +748,7 @@ exports[`snapshot scenarios > S4: single agent grabs from input, walks, drops on
           },
         },
         "cargoOnTiles": {
-          "0,0": [
+          "1,0": [
             {
               "id": 1,
               "type": "alpha",
@@ -809,7 +809,7 @@ exports[`snapshot scenarios > S4: single agent grabs from input, walks, drops on
           },
         },
         "cargoOnTiles": {
-          "0,0": [
+          "1,0": [
             {
               "id": 1,
               "type": "alpha",
