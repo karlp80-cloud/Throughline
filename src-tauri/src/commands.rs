@@ -273,12 +273,36 @@ pub async fn generate_campaign(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
-    #[cfg(windows)]
-    {
-        // Suppress the console-window flash on Windows.
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        cmd.creation_flags(CREATE_NO_WINDOW);
+    // Strip Claude Code "I'm running inside a parent SDK session" env
+    // markers before spawning. When the Tauri app inherits these from
+    // a developer's shell (e.g. `npm run tauri dev` invoked from inside
+    // a Claude Code session), the spawned `claude -p` subprocess detects
+    // a parent it can't actually reach via IPC and hangs waiting. The
+    // smoke-test path doesn't hit this because vitest's subprocess
+    // chain doesn't add the extra hop these markers conflict with.
+    // Identified during Phase 11 manual playtest.
+    for var in [
+        "CLAUDECODE",
+        "CLAUDE_CODE_SESSION_ID",
+        "CLAUDE_CODE_ENTRYPOINT",
+        "CLAUDE_CODE_SDK_HAS_OAUTH_REFRESH",
+        "CLAUDE_CODE_SDK_HAS_HOST_AUTH_REFRESH",
+        "CLAUDE_AGENT_SDK_VERSION",
+        "CLAUDE_CODE_EMIT_TOOL_USE_SUMMARIES",
+        "CLAUDE_CODE_ENABLE_ASK_USER_QUESTION_TOOL",
+        "CLAUDE_CODE_DISABLE_CRON",
+        "CLAUDE_CODE_EXECPATH",
+        "CLAUDE_EFFORT",
+        "AI_AGENT",
+        "BAGGAGE",
+    ] {
+        cmd.env_remove(var);
     }
+    // No CREATE_NO_WINDOW: previously set to suppress the console flash,
+    // but combining no-console + the Claude Code parent-session markers
+    // above appears to be what triggers the spawned claude to hang. A
+    // brief console window is acceptable here; Phase 12 can revisit if
+    // the flash is intrusive.
 
     let child = cmd.spawn().map_err(|e| {
         let kind = if e.kind() == std::io::ErrorKind::NotFound {
