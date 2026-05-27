@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Vite cache
+.vite/
+
+# Test outputs
+test-results/
+playwright-report/
+playwright/.cache/
+coverage/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+
+# Tauri (will be populated in Phase 11+)
+src-tauri/target/

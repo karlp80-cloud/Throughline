@@ -1,0 +1,9 @@
+dist/
+node_modules/
+playwright-report/
+test-results/
+coverage/
+package-lock.json
+
+# Prose docs: keep hand-tuned formatting (tables, line breaks).
+*.md
