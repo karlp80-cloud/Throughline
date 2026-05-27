@@ -127,7 +127,14 @@ impl ProcgenState {
 // ─── Helpers ────────────────────────────────────────────────────────
 
 const STDERR_CAP_BYTES: usize = 4 * 1024;
-const DEFAULT_TIMEOUT_MS: u64 = 5 * 60 * 1000; // 5 minutes
+// Outer wall clock that wraps the entire CLI run (system prompt + 3
+// manifest retries × per-call LLM timeout + per-puzzle solver budgets).
+// The 5-minute value the architect originally specified turned out too
+// tight under realistic 3-act × 4-puzzle defaults: a single LLM
+// generation can take 60–120 s, and 3 retries × 90 s alone hits 4.5 min
+// before solver work. Bumped to 15 minutes so the Rust wall never
+// fires before the CLI gives up on its own retries.
+const DEFAULT_TIMEOUT_MS: u64 = 15 * 60 * 1000; // 15 minutes
 const PROGRESS_INTERVAL_MS: u64 = 2000;
 
 fn resolve_cli_binary(app: &AppHandle) -> Result<PathBuf, ProcgenError> {

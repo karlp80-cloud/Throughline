@@ -60,7 +60,14 @@ export class ClaudeSpawnError extends Error {
   }
 }
 
-const DEFAULT_TIMEOUT_MS = 60_000;
+// Per-LLM-call wall clock budget. The architect doc §3.5 set this at
+// 60 s based on the smoke-test response time (1-act 2-puzzle in ~20 s),
+// but a real default campaign (3 acts × 4 puzzles) routinely takes
+// 60–120 s of LLM thinking time. Bumped to 180 s — still well under
+// the Rust-side 300 s wall clock that wraps the full CLI run, but
+// generous enough that one-shot generation usually succeeds without
+// burning a retry slot. Phase 11 manual playtest verified.
+const DEFAULT_TIMEOUT_MS = 180_000;
 const STDERR_CAP_BYTES = 4096;
 const KILL_GRACE_MS = 2_000;
 

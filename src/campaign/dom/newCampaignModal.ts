@@ -17,7 +17,11 @@
 import type { GenerateOk, GenerateOpts, ProcgenError, ProgressPayload } from '../procgen/api';
 import type { ProcgenHints } from '../procgen/hints';
 
-const DEFAULT_SAFETY_MS = 5 * 60 * 1000 + 30 * 1000; // 5:30
+// UI safety timer that fires if both `generate()` and `cancel()` hang.
+// Set comfortably above the Rust-side wall clock (15 min) so the UI
+// only escapes in the genuinely-stuck case, never just because the LLM
+// took longer than the architect originally guessed.
+const DEFAULT_SAFETY_MS = 15 * 60 * 1000 + 30 * 1000; // 15:30
 
 export interface NewCampaignModalDeps {
   generate(opts: GenerateOpts): Promise<GenerateOk>;
