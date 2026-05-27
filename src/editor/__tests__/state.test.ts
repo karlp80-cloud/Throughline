@@ -79,15 +79,20 @@ describe('placing-tile mode', () => {
     expect(s.draft.tiles).toEqual([]);
   });
 
-  test('CLICK_CELL on an input or output cell is rejected', () => {
+  test('CLICK_CELL on an input or output cell PLACES the tile (engine allows stacking)', () => {
+    // Pipelines often start with a conveyor sitting on the input cell;
+    // the editor must not block that. Engine semantics: the input still
+    // emits cargo at its position; the tile on that cell processes it.
     let s = reduce(initialEditorState(PUZZLE_WITH_AGENT), {
       type: 'SELECT_TILE_KIND',
       tileKind: 'conveyor',
     });
-    s = reduce(s, { type: 'CLICK_CELL', pos: [0, 0] }); // input
-    expect(s.draft.tiles).toEqual([]);
-    s = reduce(s, { type: 'CLICK_CELL', pos: [5, 2] }); // output
-    expect(s.draft.tiles).toEqual([]);
+    s = reduce(s, { type: 'CLICK_CELL', pos: [0, 0] }); // input cell
+    expect(s.draft.tiles).toHaveLength(1);
+    expect(s.draft.tiles[0]?.pos).toEqual([0, 0]);
+    s = reduce(s, { type: 'CLICK_CELL', pos: [5, 2] }); // output cell
+    expect(s.draft.tiles).toHaveLength(2);
+    expect(s.draft.tiles[1]?.pos).toEqual([5, 2]);
   });
 
   test('CLICK_CELL out-of-grid is rejected', () => {

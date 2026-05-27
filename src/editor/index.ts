@@ -12,7 +12,7 @@
  * The mounted editor re-renders the canvas on every dispatch.
  */
 
-import type { Pos, Puzzle } from '../engine/types';
+import type { Pos, Puzzle, Solution } from '../engine/types';
 import { initialWorld } from '../engine';
 import { render, type RenderOptions } from '../render/renderer';
 import { mountCanvas } from '../app/canvasMount';
@@ -27,8 +27,20 @@ export interface EditorHandle {
   destroy(): void;
 }
 
-export function mountEditor(container: HTMLElement, puzzle: Puzzle): EditorHandle {
+/**
+ * Mount the editor. If `initialDraft` is provided, seed the reducer
+ * with that draft so the user's previous tiles/paths/programs are
+ * preserved (e.g. across a Run → Reset round-trip).
+ */
+export function mountEditor(
+  container: HTMLElement,
+  puzzle: Puzzle,
+  initialDraft?: Solution,
+): EditorHandle {
   let state = initialEditorState(puzzle);
+  if (initialDraft) {
+    state = { ...state, draft: initialDraft };
+  }
   let hoverCell: Pos | null = null;
 
   // DOM scaffolding.

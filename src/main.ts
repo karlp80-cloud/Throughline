@@ -11,6 +11,7 @@
 import { mountCanvasFromQueryString } from './app/canvasMount';
 import { FIXTURES } from './app/fixtures';
 import { mountEditor, type EditorHandle } from './editor';
+import type { Solution } from './engine';
 import { mountPlayback, type PlaybackHandle } from './playback';
 
 declare global {
@@ -66,12 +67,16 @@ function mountEditorAndPlaybackHarness(app: HTMLElement): void {
   sub.style.cssText = 'margin: 0 12px; max-width: 700px;';
   app.appendChild(sub);
 
+  // Last draft, persisted across Run → Reset so the player doesn't
+  // lose their solution when the simulation ends.
+  let lastDraft: Solution | undefined;
+
   function switchToEdit(): void {
     if (window.__playback) {
       window.__playback.destroy();
       delete window.__playback;
     }
-    const handle = mountEditor(sub, puzzle);
+    const handle = mountEditor(sub, puzzle, lastDraft);
     window.__editor = handle;
     runBtn.disabled = false;
   }
@@ -79,10 +84,10 @@ function mountEditorAndPlaybackHarness(app: HTMLElement): void {
   function switchToPlay(): void {
     const editor = window.__editor;
     if (!editor) return;
-    const draft = editor.getState().draft;
+    lastDraft = editor.getState().draft;
     editor.destroy();
     delete window.__editor;
-    const handle = mountPlayback(sub, puzzle, draft, () => switchToEdit());
+    const handle = mountPlayback(sub, puzzle, lastDraft, () => switchToEdit());
     window.__playback = handle;
     runBtn.disabled = true;
   }

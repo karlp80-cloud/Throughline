@@ -276,7 +276,7 @@ Player rotates tiles in the editor via the `R` key. Rotation produces a new `Pla
 
 ### 4.4 Input / output cells
 
-Inputs and outputs sit on grid cells like tiles. Agents can stand on them. Player-placed tiles cannot be placed on input or output cells (Phase 3 editor enforces; engine ignores attempts).
+Inputs and outputs sit on grid cells like tiles. Agents can stand on them. Player-placed tiles MAY also sit on input/output cells — the engine processes them uniformly with stand-alone tiles, and the cell still emits/receives cargo. (Originally this memo said the editor would forbid such placement; that turned out to be over-strict — many pipelines naturally start with a conveyor *on* the input cell so the cargo has somewhere to go on cycle 0. Phase 3's editor allows it.)
 
 ---
 

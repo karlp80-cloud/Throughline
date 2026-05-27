@@ -83,14 +83,6 @@ function isObstacleCell(p: Pos, puzzle: Puzzle): boolean {
   return puzzle.obstacles.some((o) => o[0] === p[0] && o[1] === p[1]);
 }
 
-function isInputCell(p: Pos, puzzle: Puzzle): boolean {
-  return puzzle.inputs.some((i) => i.pos[0] === p[0] && i.pos[1] === p[1]);
-}
-
-function isOutputCell(p: Pos, puzzle: Puzzle): boolean {
-  return puzzle.outputs.some((o) => o.pos[0] === p[0] && o.pos[1] === p[1]);
-}
-
 function agentAt(p: Pos, puzzle: Puzzle): AgentSpec | undefined {
   return puzzle.agents.find((a) => a.startPos[0] === p[0] && a.startPos[1] === p[1]);
 }
@@ -246,9 +238,10 @@ function handleClickPlacing(
   facing: Direction,
 ): EditorState {
   if (isObstacleCell(pos, state.puzzle)) return state;
-  if (isInputCell(pos, state.puzzle)) return state;
-  if (isOutputCell(pos, state.puzzle)) return state;
-
+  // Tiles CAN be placed on input and output cells — the engine processes
+  // them uniformly with stand-alone tiles, and the input/output cell
+  // still emits/receives cargo. Putting a conveyor on the input is the
+  // natural way to start a pipeline.
   const existingIdx = state.draft.tiles.findIndex(
     (t) => t.pos[0] === pos[0] && t.pos[1] === pos[1],
   );
