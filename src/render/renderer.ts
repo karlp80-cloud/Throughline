@@ -11,6 +11,7 @@
 
 import type {
   CargoInstance,
+  CycleTrace,
   Direction,
   PlacedTile,
   Pos,
@@ -231,6 +232,7 @@ function drawCargo(
   puzzle: Puzzle,
   nextWorld?: WorldState,
   alpha?: number,
+  trace?: CycleTrace,
 ): void {
   // No interpolation requested → discrete render.
   if (!nextWorld || !alpha || alpha <= 0) {
@@ -243,7 +245,7 @@ function drawCargo(
     }
     return;
   }
-  drawCargoInterpolated(ctx, world, nextWorld, alpha);
+  drawCargoInterpolated(ctx, world, nextWorld, alpha, trace);
 }
 
 function indexCargoById(
@@ -266,26 +268,60 @@ function drawCargoInterpolated(
   world: WorldState,
   nextWorld: WorldState,
   alpha: number,
+  trace?: CycleTrace,
 ): void {
   const fromBy = indexCargoById(world.cargoOnTiles);
   const toBy = indexCargoById(nextWorld.cargoOnTiles);
 
-  // Cargo present in `world` — either lerping to its `nextWorld` position
-  // or fading out if it disappears (delivered / consumed by a reactor).
+  // Source/dest hints from this cycle's events. Without these, new
+  // cargo just fades in at its destination (which looks like it
+  // teleports), and delivered cargo just fades out at its last seen
+  // cell (which looks like it disappears short of the output).
+  const emissionPos = new Map<number, Pos>();
+  const deliveryPos = new Map<number, Pos>();
+  if (trace) {
+    for (const e of trace.emissions) emissionPos.set(e.cargo.id, e.inputPos);
+    for (const d of trace.deliveries) deliveryPos.set(d.cargo.id, d.outputPos);
+  }
+
+  // Cargo present in `world` — lerp to next position, or animate
+  // toward an output (delivery), or fade in place (reactor consume).
   for (const [id, { cargo, pos: fromPos }] of fromBy) {
     const to = toBy.get(id);
     if (to) {
       const gx = lerp(fromPos[0], to.pos[0], alpha);
       const gy = lerp(fromPos[1], to.pos[1], alpha);
       paintCargoAtCellFraction(ctx, gx, gy, cargo, 1);
-    } else {
-      paintCargoAtCellFraction(ctx, fromPos[0], fromPos[1], cargo, 1 - alpha);
+      continue;
     }
+    const out = deliveryPos.get(id);
+    if (out) {
+      // Slide from fromPos to the output cell; stay fully visible
+      // until almost the end, then fade out over the last 20%.
+      const gx = lerp(fromPos[0], out[0], alpha);
+      const gy = lerp(fromPos[1], out[1], alpha);
+      const op = alpha < 0.8 ? 1 : (1 - alpha) / 0.2;
+      paintCargoAtCellFraction(ctx, gx, gy, cargo, op);
+      continue;
+    }
+    // No delivery → consumed by a reactor. Fade out where it sat.
+    paintCargoAtCellFraction(ctx, fromPos[0], fromPos[1], cargo, 1 - alpha);
   }
-  // Cargo NEW in `nextWorld` (emitted this cycle, produced by a reactor):
-  // fade in at its destination.
+
+  // Cargo NEW in `nextWorld` — either emitted (slide from input cell)
+  // or produced by a reactor (fade in at its destination).
   for (const [id, { cargo, pos }] of toBy) {
     if (fromBy.has(id)) continue;
+    const inputPos = emissionPos.get(id);
+    if (inputPos) {
+      const gx = lerp(inputPos[0], pos[0], alpha);
+      const gy = lerp(inputPos[1], pos[1], alpha);
+      // Fade in over the first 20% so it eases into visibility
+      // instead of popping in at the input cell.
+      const op = alpha < 0.2 ? alpha / 0.2 : 1;
+      paintCargoAtCellFraction(ctx, gx, gy, cargo, op);
+      continue;
+    }
     paintCargoAtCellFraction(ctx, pos[0], pos[1], cargo, alpha);
   }
 }
@@ -423,6 +459,13 @@ export interface RenderOptions {
    */
   readonly nextWorld?: WorldState;
   readonly alpha?: number;
+  /**
+   * Events of the cycle being transitioned. Used to slide emitted
+   * cargo from input cells and delivered cargo into output cells.
+   * Omit for discrete renders or for animations where input/output
+   * slides aren't needed.
+   */
+  readonly trace?: CycleTrace;
 }
 
 export function render(
@@ -438,7 +481,7 @@ export function render(
   drawInputsAndOutputs(ctx, puzzle);
   drawTiles(ctx, solution.tiles);
   if (opts.showPaths !== false) drawPaths(ctx, solution.paths);
-  drawCargo(ctx, world, puzzle, opts.nextWorld, opts.alpha);
+  drawCargo(ctx, world, puzzle, opts.nextWorld, opts.alpha, opts.trace);
   drawAgents(ctx, world, opts.nextWorld, opts.alpha);
   if (opts.preview) drawPreviewTile(ctx, opts.preview, puzzle, solution);
 }

@@ -36,6 +36,12 @@ export interface Animator {
   currentWorld(): WorldState;
   /** World we're interpolating TO; null when there's no next frame. */
   nextWorld(): WorldState | null;
+  /**
+   * Events of the cycle being transitioned (trace[frame+1]). Lets the
+   * renderer slide emitted cargo from input cells and delivered cargo
+   * into output cells. Null when there's no next frame.
+   */
+  nextTrace(): CycleTrace | null;
   /** Progress [0,1] from currentWorld → nextWorld within this cycle. */
   alpha(): number;
   haltStatus(): EngineStatus;
@@ -87,11 +93,18 @@ export function createAnimator(opts: AnimatorOptions): Animator {
     return t ? t.worldAfter : null;
   }
 
+  function nextTrace(): CycleTrace | null {
+    const next = frame + 1;
+    if (next < 0 || next >= opts.trace.length) return null;
+    return opts.trace[next] ?? null;
+  }
+
   return {
     status: () => status,
     frame: () => frame,
     currentWorld: world,
     nextWorld,
+    nextTrace,
     alpha: () => {
       if (status === 'finished') return 0;
       const dur = cycleDurationMs(speed);

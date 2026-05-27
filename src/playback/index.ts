@@ -52,9 +52,11 @@ export function mountPlayback(
   function paint(): void {
     const next = animator.nextWorld();
     const a = animator.alpha();
+    const tr = animator.nextTrace();
     render(ctx!, animator.currentWorld(), puzzle, solution, {
       showPaths: true,
       ...(next !== null ? { nextWorld: next, alpha: a } : {}),
+      ...(tr !== null ? { trace: tr } : {}),
     });
   }
   paint();
