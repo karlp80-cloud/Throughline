@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "seed": "twoactdemo",
+  "theme": {
+    "name": "The Workshop",
+    "setting_summary": "A small training campaign — two acts, three trivial puzzles.",
+    "palette": {
+      "bg": "#1a1820",
+      "surface": "#241f29",
+      "fg": "#e8d8b0",
+      "muted": "#7a6a55",
+      "accent": "#c87650",
+      "success": "#82c08a",
+      "danger": "#d06060"
+    },
+    "glyphs": {
+      "input": "alembic",
+      "output": "phial",
+      "agent": "homunculus",
+      "tile_conveyor": "leyline"
+    },
+    "vocabulary": {
+      "cargo": "essence",
+      "agent": "homunculus",
+      "tile": "rune",
+      "cycle": "tick"
+    }
+  },
+  "acts": [
+    {
+      "id": "act1",
+      "title": "First Steps",
+      "intro_text": "You are at the bench. A simple line of essence flows past you. Route it from the alembic to the phial.",
+      "outro_text": "The phial fills. The mentor nods.",
+      "required_completions": 1,
+      "puzzles": [
+        {
+          "id": "a1_p1",
+          "title": "Single Line",
+          "briefing": "Place conveyors to carry essence from the alembic to the phial.",
+          "grid": { "w": 5, "h": 3 },
+          "inputs": [{ "pos": [0, 1], "emits": ["alpha"], "rate": 1 }],
+          "outputs": [{ "pos": [4, 1], "required": [{ "type": "alpha", "count": 3 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 8, "max_cycles": 30 },
+          "optional_challenges": [
+            { "id": "opt_fast", "label": "Solve in <10 cycles", "rule": "cycles < 10" },
+            { "id": "opt_lean", "label": "Use ≤4 tiles", "rule": "tiles_used <= 4" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "act2",
+      "title": "Branching",
+      "intro_text": "Now the alembic produces two distinct essences. Route alpha to one phial and ignore the rest.",
+      "outro_text": "You begin to see how filters shape the flow.",
+      "required_completions": 1,
+      "puzzles": [
+        {
+          "id": "a2_p1",
+          "title": "Filtering",
+          "briefing": "Use a filter to let only alpha reach the phial.",
+          "grid": { "w": 6, "h": 3 },
+          "inputs": [{ "pos": [0, 1], "emits": ["alpha", "beta"], "rate": 1 }],
+          "outputs": [{ "pos": [5, 1], "required": [{ "type": "alpha", "count": 3 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "filter"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 8, "max_cycles": 60 },
+          "optional_challenges": []
+        }
+      ]
+    }
+  ],
+  "ending": {
+    "good": "You have learned to throughline. The workshop is yours to keep.",
+    "neutral": "The mentor sets down their tools."
+  }
+}

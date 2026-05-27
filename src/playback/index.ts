@@ -26,6 +26,10 @@ export interface PlaybackHandle {
   destroy(): void;
   /** For tests/inspection — read-only-ish access to the underlying animator. */
   animator(): Animator;
+  /** The precomputed trace this session was built from. */
+  trace(): readonly CycleTrace[];
+  /** The engine's halt status from the original computation. */
+  haltStatus(): import('../engine').EngineStatus;
 }
 
 export function mountPlayback(
@@ -121,6 +125,8 @@ export function mountPlayback(
 
   return {
     animator: () => animator,
+    trace: () => result.trace,
+    haltStatus: () => result.status,
     destroy() {
       cancelAnimationFrame(rafId);
       offUpdate();
