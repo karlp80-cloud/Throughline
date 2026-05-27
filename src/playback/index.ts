@@ -13,10 +13,11 @@
  */
 
 import { mountCanvas } from '../app/canvasMount';
+import type { AudioController } from '../audio';
 import { detectCompletion } from '../completion/detector';
 import { mountResultsPanel, type ResultsPanelHandle } from '../completion/dom/resultsPanel';
 import { initialWorld, runUntilHalt } from '../engine';
-import type { Puzzle, Solution } from '../engine';
+import type { CycleTrace, Puzzle, Solution } from '../engine';
 import { render } from '../render/renderer';
 import { createAnimator, type Animator } from './animator';
 import { mountControls } from './dom/controls';
@@ -32,6 +33,7 @@ export function mountPlayback(
   puzzle: Puzzle,
   solution: Solution,
   onReset: () => void,
+  audio?: AudioController,
 ): PlaybackHandle {
   const result = runUntilHalt(puzzle, solution);
   const init = initialWorld(puzzle);
@@ -72,13 +74,24 @@ export function mountPlayback(
 
   // RAF driver. Ticks the animator with the wall-clock delta and
   // repaints every frame so cargo/agents lerp visibly between cycles.
+  // Tracks the last frame we emitted SFX for so we don't re-trigger
+  // sounds on every paint within a cycle.
   let rafId = 0;
   let lastTs = 0;
+  let lastSfxFrame = animator.frame();
   function loop(ts: number): void {
     const dt = lastTs === 0 ? 0 : ts - lastTs;
     lastTs = ts;
     animator.tick(dt);
     paint();
+    if (audio && animator.frame() !== lastSfxFrame) {
+      // Emit SFX for every NEW frame since lastSfxFrame.
+      for (let f = lastSfxFrame + 1; f <= animator.frame(); f++) {
+        const ct = result.trace[f];
+        if (ct) emitFrameSfx(ct, audio);
+      }
+      lastSfxFrame = animator.frame();
+    }
     rafId = requestAnimationFrame(loop);
   }
   rafId = requestAnimationFrame(loop);
@@ -94,6 +107,9 @@ export function mountPlayback(
     if (s === 'finished' && lastStatus !== 'finished') {
       const completion = detectCompletion(puzzle, solution, result.trace);
       resultsPanel = mountResultsPanel(resultsEl, completion, animator.haltStatus());
+      if (audio) {
+        audio.playSfx(animator.haltStatus() === 'victory' ? 'success' : 'failure');
+      }
     } else if (s !== 'finished' && lastStatus === 'finished') {
       // e.g. reset back to idle — clear the panel
       resultsPanel?.destroy();
@@ -113,6 +129,27 @@ export function mountPlayback(
       container.replaceChildren();
     },
   };
+}
+
+function emitFrameSfx(trace: CycleTrace, audio: AudioController): void {
+  // Per-agent SFX. Dedupe sounds so a busy frame doesn't spam — at
+  // most one of each kind per cycle is plenty for the player to hear.
+  let grabbed = false;
+  let dropped = false;
+  let moved = false;
+  for (const e of trace.agentEvents) {
+    const kind = e.opExecuted.kind;
+    if (kind === 'GRAB' && !grabbed) {
+      audio.playSfx('cargo_grab');
+      grabbed = true;
+    } else if (kind === 'DROP' && !dropped) {
+      audio.playSfx('cargo_drop');
+      dropped = true;
+    } else if (kind === 'MOVE' && (e.from[0] !== e.to[0] || e.from[1] !== e.to[1]) && !moved) {
+      audio.playSfx('agent_step');
+      moved = true;
+    }
+  }
 }
 
 // Note: `window.__playback` is declared in src/main.ts (the canonical

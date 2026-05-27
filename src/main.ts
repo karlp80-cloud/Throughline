@@ -10,6 +10,7 @@
  */
 import { mountCanvasFromQueryString } from './app/canvasMount';
 import { FIXTURES } from './app/fixtures';
+import { AudioController, mountVolumeMixer, WebAudioBackend } from './audio';
 import { mountEditor, type EditorHandle } from './editor';
 import type { Solution } from './engine';
 import { mountPlayback, type PlaybackHandle } from './playback';
@@ -18,6 +19,7 @@ declare global {
   interface Window {
     __editor?: EditorHandle;
     __playback?: PlaybackHandle;
+    __audio?: AudioController;
   }
 }
 
@@ -48,6 +50,12 @@ function mountEditorAndPlaybackHarness(app: HTMLElement): void {
   const fixture = FIXTURES['editorDefault']!;
   const puzzle = fixture.puzzle;
 
+  // Audio: construct the controller eagerly. The underlying
+  // AudioContext is suspended until the first SFX call, which
+  // resumes it (browser autoplay policy). Skip in headless test
+  // environments where window.AudioContext isn't present.
+  const audio = createAudio();
+
   // Top-level actions toolbar (above the editor/playback view).
   const actions = document.createElement('div');
   actions.style.cssText = 'margin: 0 12px 8px; display: flex; gap: 8px; align-items: center;';
@@ -61,6 +69,11 @@ function mountEditorAndPlaybackHarness(app: HTMLElement): void {
     font: inherit; font-weight: 600;
   `;
   actions.appendChild(runBtn);
+  if (audio) {
+    const mixerEl = document.createElement('div');
+    actions.appendChild(mixerEl);
+    mountVolumeMixer(mixerEl, audio);
+  }
   app.appendChild(actions);
 
   const sub = document.createElement('div');
@@ -76,7 +89,7 @@ function mountEditorAndPlaybackHarness(app: HTMLElement): void {
       window.__playback.destroy();
       delete window.__playback;
     }
-    const handle = mountEditor(sub, puzzle, lastDraft);
+    const handle = mountEditor(sub, puzzle, lastDraft, audio ?? undefined);
     window.__editor = handle;
     runBtn.disabled = false;
   }
@@ -87,7 +100,9 @@ function mountEditorAndPlaybackHarness(app: HTMLElement): void {
     lastDraft = editor.getState().draft;
     editor.destroy();
     delete window.__editor;
-    const handle = mountPlayback(sub, puzzle, lastDraft, () => switchToEdit());
+    // Resume the audio context on user gesture (Run click is the gesture).
+    audio?.startLoop('puzzle');
+    const handle = mountPlayback(sub, puzzle, lastDraft, () => switchToEdit(), audio ?? undefined);
     window.__playback = handle;
     runBtn.disabled = true;
   }
@@ -96,4 +111,22 @@ function mountEditorAndPlaybackHarness(app: HTMLElement): void {
 
   // Initial state: editor.
   switchToEdit();
+}
+
+function createAudio(): AudioController | null {
+  if (typeof window === 'undefined') return null;
+  if (typeof (window as { AudioContext?: unknown }).AudioContext === 'undefined') return null;
+  const controller = new AudioController(new WebAudioBackend());
+  window.__audio = controller;
+  // Resume the underlying AudioContext on the FIRST user click anywhere.
+  // Browsers block AudioContext until a user gesture; this is the cheapest
+  // way to ensure SFX work without a "click to enable audio" prompt.
+  const onFirstGesture = (): void => {
+    void controller.ensureRunning();
+    window.removeEventListener('pointerdown', onFirstGesture);
+    window.removeEventListener('keydown', onFirstGesture);
+  };
+  window.addEventListener('pointerdown', onFirstGesture);
+  window.addEventListener('keydown', onFirstGesture);
+  return controller;
 }

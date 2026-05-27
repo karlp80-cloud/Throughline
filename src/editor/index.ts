@@ -12,6 +12,7 @@
  * The mounted editor re-renders the canvas on every dispatch.
  */
 
+import type { AudioController } from '../audio';
 import type { Pos, Puzzle, Solution } from '../engine/types';
 import { initialWorld } from '../engine';
 import { render, type RenderOptions } from '../render/renderer';
@@ -30,12 +31,15 @@ export interface EditorHandle {
 /**
  * Mount the editor. If `initialDraft` is provided, seed the reducer
  * with that draft so the user's previous tiles/paths/programs are
- * preserved (e.g. across a Run → Reset round-trip).
+ * preserved (e.g. across a Run → Reset round-trip). `audio` is
+ * optional; when provided the editor triggers SFX on tile placement,
+ * rotation, and deletion.
  */
 export function mountEditor(
   container: HTMLElement,
   puzzle: Puzzle,
   initialDraft?: Solution,
+  audio?: AudioController,
 ): EditorHandle {
   let state = initialEditorState(puzzle);
   if (initialDraft) {
@@ -84,7 +88,9 @@ export function mountEditor(
   );
 
   function dispatch(action: EditorAction): void {
+    const prev = state;
     state = reduce(state, action);
+    if (audio) emitSfxFor(prev, state, action, audio);
     rerenderCanvas();
     palette.update();
     opList.update();
@@ -103,4 +109,37 @@ export function mountEditor(
       container.replaceChildren();
     },
   };
+}
+
+function emitSfxFor(
+  prev: EditorState,
+  next: EditorState,
+  action: EditorAction,
+  audio: AudioController,
+): void {
+  const prevTileCount = prev.draft.tiles.length;
+  const nextTileCount = next.draft.tiles.length;
+  if (nextTileCount > prevTileCount) {
+    audio.playSfx('tile_place');
+    return;
+  }
+  if (nextTileCount < prevTileCount) {
+    audio.playSfx('tile_delete');
+    return;
+  }
+  // Same count but a tile was replaced (CLICK_CELL in placing mode on
+  // an existing tile): also a "place" sound.
+  if (action.type === 'CLICK_CELL' && prev.mode.kind === 'placing-tile') {
+    const replaced = next.draft.tiles.some((t, i) => {
+      const p = prev.draft.tiles[i];
+      return !p || p.kind !== t.kind || p.facing !== t.facing;
+    });
+    if (replaced) {
+      audio.playSfx('tile_place');
+      return;
+    }
+  }
+  if (action.type === 'ROTATE_PLACEMENT_FACING' || action.type === 'ROTATE_SELECTED_TILE') {
+    audio.playSfx('tile_rotate');
+  }
 }
