@@ -251,7 +251,7 @@ Already pinned in §2 (`Solution`). Three notes:
 | Kind | Facing means |
 |---|---|
 | `conveyor` | Direction cargo moves from this cell each cycle. |
-| `splitter` | "Cargo arrives FROM the OPPOSITE of facing; departs ALTERNATELY along the two perpendiculars to facing." Example: facing `E` ⇒ cargo arrives from `W`, departs `N` and `S` alternately, starting `N` on first arrival. |
+| `splitter` | "Cargo arrives FROM the OPPOSITE of facing; departs ALTERNATELY along the two perpendiculars to facing." Example: facing `E` ⇒ cargo arrives from `W`, departs `N` and `S` alternately — **per cargo, not per cycle**. The first cargo on the cell this cycle goes to perpendicular[0]; the second to perpendicular[1]; the third back to perpendicular[0]; etc. The next-out direction (where the NEXT arriving cargo should go) is persisted in `tileState[posKey].splitterNextOut` for use by future cycles. |
 | `merger` | "Cargo arrives FROM the two perpendiculars to facing; departs in the facing direction." Example: facing `E` ⇒ arrivals from `N` and `S` combine into a stream going `E`. |
 | `filter` | Cargo of `filterType` passes in the facing direction; others stay on the cell (blocked). |
 | `reactor` | Combines cargo of the recipe's `inputs` types currently on the cell into one cargo of the recipe's `output` type, leaving on the facing direction. |
