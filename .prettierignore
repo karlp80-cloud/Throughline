@@ -1,9 +1,13 @@
 dist/
+dist-cli/
 node_modules/
 playwright-report/
 test-results/
 coverage/
 package-lock.json
+
+# CLI test fixtures: intentionally malformed JSON for corpus tests.
+cli/test-fixtures/
 
 # Prose docs: keep hand-tuned formatting (tables, line breaks).
 *.md

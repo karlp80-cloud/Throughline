@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "seed": "fixture",
+  "theme": {
+    "name": "Test",
+    "setting_summary": "",
+    "palette": {
+      "bg": "#000000",
+      "surface": "#111111",
+      "fg": "#ffffff",
+      "muted": "#888888",
+      "accent": "#ff00ff",
+      "success": "#00ff00",
+      "danger": "#ff0000"
+    },
+    "glyphs": {},
+    "vocabulary": {}
+  },
+  "acts": [
+    {
+      "id": "a1",
+      "title": "Act",
+      "intro_text": "",
+      "outro_text": "",
+      "required_completions": 0,
+      "puzzles": [
+        {
+          "id": "p1",
+          "title": "P",
+          "briefing": "",
+          "grid": { "w": 3, "h": 1 },
+          "inputs": [{ "pos": [0, 0], "emits": ["alpha"], "rate": 0 }],
+          "outputs": [{ "pos": [2, 0], "required": [{ "type": "alpha", "count": 1 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor"],
+          "available_ops": ["MOVE"],
+          "constraints": { "max_tiles": 3, "max_cycles": 10 },
+          "optional_challenges": []
+        }
+      ]
+    }
+  ],
+  "ending": { "good": "", "neutral": "" }
+}
