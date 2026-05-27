@@ -1,0 +1,29 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "outDir": "../dist-cli",
+    "rootDir": "..",
+    "noEmit": false,
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false
+  },
+  "include": [
+    "src/**/*",
+    "../src/schema/**/*",
+    "../src/engine/**/*",
+    "../src/dsl/**/*",
+    "../src/campaign/load.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/__tests__/**",
+    "test-fixtures/**",
+    "integration/**",
+    "src/scripts/**"
+  ]
+}

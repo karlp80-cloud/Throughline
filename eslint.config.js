@@ -6,10 +6,12 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      'dist-cli/**',
       'node_modules/**',
       'playwright-report/**',
       'test-results/**',
       'coverage/**',
+      'cli/test-fixtures/**',
     ],
   },
   ...tseslint.configs.recommended,

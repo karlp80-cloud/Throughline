@@ -8,9 +8,13 @@
   "engines": {
     "node": ">=20"
   },
+  "bin": {
+    "throughline-gen": "./bin/throughline-gen"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:cli": "tsc -p cli/tsconfig.json",
     "preview": "vite preview --port 4173",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
