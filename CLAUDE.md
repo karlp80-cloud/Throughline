@@ -13,15 +13,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phase 2 code complete; awaiting manual visual review.** Origin: https://github.com/karlp80-cloud/Throughline.
+**Phase 3 code complete; awaiting manual playtest.** Origin: https://github.com/karlp80-cloud/Throughline.
 
-Phases 0–1 fully done; Phase 1 reviewer-approved with 135 engine tests, including a 50-puzzle solver corpus and 200-run conservation + determinism property tests.
+Phases 0–2 done. Phase 3 added a hand-written editor: pure reducer (`src/editor/state.ts`) + DOM layer (`src/editor/dom/{palette,opList,canvasInput}.ts`) + `mountEditor` entrypoint. Visit `npm run dev` → `/?editor=1` to playtest. Memo at [docs/architecture/editor.md](docs/architecture/editor.md).
 
-Phase 2 added a Canvas renderer: `src/render/renderer.ts` (layered draw pipeline), `src/render/palette.ts` (CSS-var indirection + cache), `src/render/glyphs/index.ts` (8 starter SVG-path glyphs), `src/app/canvasMount.ts` (mounts canvas + dispatches by `?fixture=NAME` query string), 4 named fixtures in `src/app/fixtures.ts`. **Tests:** 5 palette unit + 4 Playwright screenshot-diff baselines in `e2e/render.spec.ts-snapshots/` (OS-agnostic; 1% diff tolerance). Memo at [docs/architecture/renderer.md](docs/architecture/renderer.md).
+**Tally:** 175 unit tests (135 engine + 5 palette + 35 editor reducer) + 6 e2e (1 smoke + 4 renderer screenshot diffs + 1 editor construction). Tsc + lint clean. CI green at each push.
 
-**Pending:** manual visual review per Phase 2 plan. Inspect the 4 committed PNGs (or run `npm run dev` and visit `/?fixture=fullPreRun`). If the Opus-Magnum aesthetic isn't there yet, iterate on glyph paths + stroke widths in `src/render/glyphs/index.ts` and `src/render/renderer.ts` then update snapshots with `npx playwright test -u`.
+**Pending:** 30-min manual playtest of the editor (light-cycle reviewer step). File a note in `docs/playtest/phase-3.md` per the plan if friction shows up.
 
-**Next after review:** Phase 3 — Editor. Light cycle.
+**Next:** Phase 4 — Playback Controls. Light cycle (architect notes on animation interpolation strategy + coder + manual feel review).
 
 When a phase completes, update this section to point at the next phase.
 
