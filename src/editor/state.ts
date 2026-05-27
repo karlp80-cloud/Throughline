@@ -58,6 +58,10 @@ export type EditorAction =
   // Tile manipulation
   | { readonly type: 'ROTATE_SELECTED_TILE' }
   | { readonly type: 'DELETE_SELECTED_TILE' }
+  // Bulk replace the draft (used by tests + future "load saved solution"
+  // flows). Resets mode to idle so the new draft isn't being edited
+  // mid-action.
+  | { readonly type: 'LOAD_SOLUTION'; readonly solution: Solution }
   // Misc
   | { readonly type: 'CLEAR_SELECTION' };
 
@@ -200,6 +204,14 @@ export function reduce(state: EditorState, action: EditorAction): EditorState {
 
     case 'DELETE_SELECTED_TILE':
       return handleDeleteSelectedTile(state);
+
+    case 'LOAD_SOLUTION':
+      return {
+        ...state,
+        draft: action.solution,
+        mode: { kind: 'idle' },
+        selection: { kind: 'none' },
+      };
 
     case 'CLEAR_SELECTION':
       return { ...state, selection: { kind: 'none' } };

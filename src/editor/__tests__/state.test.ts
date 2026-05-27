@@ -348,6 +348,34 @@ describe('op-list editing', () => {
   });
 });
 
+describe('LOAD_SOLUTION', () => {
+  test('replaces the draft and resets mode + selection', () => {
+    let s = reduce(initialEditorState(PUZZLE_WITH_AGENT), {
+      type: 'SELECT_TILE_KIND',
+      tileKind: 'conveyor',
+    });
+    s = reduce(s, { type: 'CLICK_CELL', pos: [1, 1] });
+    expect(s.draft.tiles).toHaveLength(1);
+
+    const loaded = reduce(s, {
+      type: 'LOAD_SOLUTION',
+      solution: {
+        tiles: [
+          { pos: [3, 3], kind: 'conveyor', facing: 'S' },
+          { pos: [4, 3], kind: 'conveyor', facing: 'S' },
+        ],
+        paths: { a1: [[2, 2]] },
+        programs: { a1: [{ kind: 'WAIT' }] },
+      },
+    });
+    expect(loaded.draft.tiles).toHaveLength(2);
+    expect(loaded.draft.tiles[0]?.pos).toEqual([3, 3]);
+    expect(loaded.draft.programs['a1']).toEqual([{ kind: 'WAIT' }]);
+    expect(loaded.mode).toEqual({ kind: 'idle' });
+    expect(loaded.selection).toEqual({ kind: 'none' });
+  });
+});
+
 describe('SENSE op append and edit', () => {
   test('APPEND_OP with a SENSE op stores branches', () => {
     let s = reduce(initialEditorState(PUZZLE_WITH_AGENT), {

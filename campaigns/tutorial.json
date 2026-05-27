@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "seed": "apprentice",
+  "theme": {
+    "name": "The Workshop",
+    "setting_summary": "A training campaign. One mechanic per puzzle, taught by a mentor in plain language.",
+    "palette": {
+      "bg": "#1a1820",
+      "surface": "#241f29",
+      "fg": "#e8d8b0",
+      "muted": "#7a6a55",
+      "accent": "#c87650",
+      "success": "#82c08a",
+      "danger": "#d06060"
+    },
+    "glyphs": {},
+    "vocabulary": {}
+  },
+  "acts": [
+    {
+      "id": "apprenticeship",
+      "title": "The Apprentice's Manual",
+      "intro_text": "Welcome to the Workshop. You'll learn one operator at a time. Take your time — there's no clock other than the one in the puzzle.\n\nWhen you're ready, choose 'First Flow' below.",
+      "outro_text": "You've worked through the manual. The mentor sets down their tools and gestures at the wider workshop.\n\n\"You're ready for commissions of your own now. Real ones — the kind whose shape no one knows ahead of time.\"",
+      "required_completions": 6,
+      "puzzles": [
+        {
+          "id": "p1_first_flow",
+          "title": "First Flow",
+          "briefing": "Mentor: \"Every flow has an origin and a destination. The conveyor is the simplest operator — it carries what arrives, in the direction it points.\n\nDrop three conveyors between the input on the left and the output on the right. Run, watch.\"",
+          "grid": { "w": 5, "h": 3 },
+          "inputs": [{ "pos": [0, 1], "emits": ["alpha"], "rate": 1 }],
+          "outputs": [{ "pos": [4, 1], "required": [{ "type": "alpha", "count": 3 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 8, "max_cycles": 30 },
+          "optional_challenges": [
+            { "id": "opt_lean", "label": "Use ≤4 tiles", "rule": "tiles_used <= 4" }
+          ]
+        },
+        {
+          "id": "p2_branching",
+          "title": "The Branching Path",
+          "briefing": "Mentor: \"The splitter sends arrivals alternately along its two perpendicular outputs. First one way, then the other, on every arrival.\n\nThere are two outputs this time. Use one splitter to feed both.\"",
+          "grid": { "w": 5, "h": 3 },
+          "inputs": [{ "pos": [0, 1], "emits": ["alpha"], "rate": 1 }],
+          "outputs": [
+            { "pos": [4, 0], "required": [{ "type": "alpha", "count": 2 }] },
+            { "pos": [4, 2], "required": [{ "type": "alpha", "count": 2 }] }
+          ],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "splitter"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 12, "max_cycles": 40 },
+          "optional_challenges": []
+        },
+        {
+          "id": "p3_two_hands",
+          "title": "Two Hands, One Mind",
+          "briefing": "Mentor: \"When no tile fits the bend, place an operator. You'll trace where they walk — a path of cells — and write a tiny program of operations they cycle through.\n\nGRAB picks up flow at their cell. DROP releases it. MOVE walks one step along the path. Their hands hold one thing at a time.\n\nThe input here is at the left. No tiles are allowed in this puzzle — only the operator. Have them walk back and forth.\"",
+          "grid": { "w": 4, "h": 1 },
+          "inputs": [{ "pos": [0, 0], "emits": ["alpha"], "rate": 1 }],
+          "outputs": [{ "pos": [3, 0], "required": [{ "type": "alpha", "count": 2 }] }],
+          "agents": [{ "id": "a1", "start_pos": [0, 0], "max_ops": 10 }],
+          "obstacles": [],
+          "available_tiles": ["conveyor"],
+          "available_ops": ["MOVE", "GRAB", "DROP", "WAIT"],
+          "constraints": { "max_tiles": 0, "max_cycles": 40 },
+          "optional_challenges": [
+            { "id": "opt_tight", "label": "Solve in <20 cycles", "rule": "cycles < 20" }
+          ]
+        },
+        {
+          "id": "p4_sorters_eye",
+          "title": "The Sorter's Eye",
+          "briefing": "Mentor: \"The filter lets one kind of flow through and blocks the rest. Wrong-type flow piles up on the filter cell — that's normal; it just means you've chosen not to route it onward.\n\nThe input now produces two kinds of flow, alternately. Only alpha should reach the output.\"",
+          "grid": { "w": 6, "h": 3 },
+          "inputs": [{ "pos": [0, 1], "emits": ["alpha", "beta"], "rate": 1 }],
+          "outputs": [{ "pos": [5, 1], "required": [{ "type": "alpha", "count": 3 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "filter"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 8, "max_cycles": 40 },
+          "optional_challenges": [
+            { "id": "opt_lean", "label": "Use ≤5 tiles", "rule": "tiles_used <= 5" }
+          ]
+        },
+        {
+          "id": "p5_confluence",
+          "title": "Confluence",
+          "briefing": "Mentor: \"Two flows arrive from different directions; the merger gathers them and passes them down its facing line.\n\nThere are two inputs above and below. Route them both to the same output through a single merger.\"",
+          "grid": { "w": 6, "h": 3 },
+          "inputs": [
+            { "pos": [0, 0], "emits": ["alpha"], "rate": 1 },
+            { "pos": [0, 2], "emits": ["alpha"], "rate": 1 }
+          ],
+          "outputs": [{ "pos": [5, 1], "required": [{ "type": "alpha", "count": 4 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "merger"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 12, "max_cycles": 30 },
+          "optional_challenges": []
+        },
+        {
+          "id": "p6_graduation",
+          "title": "Graduation: The First Commission",
+          "briefing": "Mentor: \"This is what the work looks like at scale.\n\nTwo inputs of different flow. A reactor that combines them into a third kind. Route the third kind to the output.\n\nEverything you've learned, working together. Take your time.\"",
+          "grid": { "w": 7, "h": 4 },
+          "inputs": [
+            { "pos": [0, 1], "emits": ["alpha"], "rate": 2 },
+            { "pos": [0, 3], "emits": ["beta"], "rate": 2 }
+          ],
+          "outputs": [{ "pos": [6, 2], "required": [{ "type": "gamma", "count": 2 }] }],
+          "agents": [{ "id": "a1", "start_pos": [3, 0], "max_ops": 4 }],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "splitter", "merger", "filter", "reactor"],
+          "available_ops": ["MOVE", "GRAB", "DROP", "WAIT", "SENSE"],
+          "constraints": { "max_tiles": 20, "max_cycles": 60 },
+          "optional_challenges": [
+            { "id": "opt_lean", "label": "Use ≤12 tiles", "rule": "tiles_used <= 12" }
+          ]
+        }
+      ]
+    }
+  ],
+  "ending": {
+    "good": "You leave the Workshop with the tools you came for: a knowledge of flow, of operators, of the small programs that bend one into another. The mentor's voice stays with you in some shape, even after the doors close behind you.\n\n— The Apprentice's Manual, complete.",
+    "neutral": "The work is done, for now."
+  }
+}

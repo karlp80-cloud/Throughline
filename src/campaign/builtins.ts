@@ -8,6 +8,7 @@
  */
 
 import alchemyJson from '../../campaigns/alchemy-demo.json';
+import tutorialJson from '../../campaigns/tutorial.json';
 import twoActJson from '../../campaigns/two-act.json';
 
 export interface BuiltInCampaign {
@@ -17,6 +18,11 @@ export interface BuiltInCampaign {
 }
 
 export const BUILT_IN_CAMPAIGNS: readonly BuiltInCampaign[] = [
+  {
+    id: 'tutorial',
+    displayName: "The Apprentice's Manual (tutorial)",
+    manifest: tutorialJson,
+  },
   {
     id: 'demo-two-act',
     displayName: 'The Workshop (demo, 2 acts)',
