@@ -32,13 +32,17 @@ import {
   emptySave,
   loadSave,
   markPuzzleComplete,
+  readLibrary,
+  removeLibraryEntry,
   upsertLibraryEntry,
   writeSave,
   type CampaignSave,
+  type LibraryEntry,
 } from '../saves';
 import { LocalStorageBackend, type StorageBackend } from '../storage';
 import { BUILT_IN_CAMPAIGNS, type BuiltInCampaign } from '../builtins';
 import { manifestHash } from '../hash';
+import { mountNewCampaignButton } from './newCampaignButton';
 
 export interface CampaignHarnessHandle {
   state(): CampaignState;
@@ -49,7 +53,47 @@ export interface CampaignHarnessHandle {
   dispatch(action: CampaignAction): void;
   /** Force-load a campaign (e.g. for tests). */
   loadCampaign(id: string): void;
+  /**
+   * Load a procgen-generated manifest already in memory. Synthesizes
+   * a campaign id, save, and library entry, then transitions to the
+   * first act intro. Throws on JSON syntax error or
+   * `CampaignParseError` — callers (`newCampaignButton`'s glue) show
+   * the appropriate error modal.
+   */
+  loadGeneratedManifest(manifestJson: string, sourcePath: string, seedUsed: string): void;
+  /**
+   * Resume-on-launch path: given an on-disk path, read its contents
+   * via the supplied reader, then `loadGeneratedManifest`. The reader
+   * is injected so tests can drive the path without a Tauri host.
+   * Rejects with the reader's error if the file can't be read.
+   */
+  loadCampaignFromSourcePath(
+    sourcePath: string,
+    seedUsed: string,
+    reader: (path: string) => Promise<string>,
+  ): Promise<void>;
+  /**
+   * Hook for the New Campaign button. The harness binds these so the
+   * caller can re-render the main menu from outside (e.g. when the
+   * library list changes after a successful generation). Optional;
+   * production wiring is in mountCampaignHarness.
+   */
+  refreshMainMenu(): void;
   destroy(): void;
+}
+
+/**
+ * Glue surface for the New Campaign flow. Passed to
+ * `mountCampaignHarness` so the host (src/main.ts) can wire the
+ * Tauri-aware flow without dragging Tauri imports into harness.ts.
+ */
+export interface NewCampaignFlowDeps {
+  /** True when running inside the Tauri webview. */
+  isTauri(): boolean;
+  /** Open the Tauri pre-gen + generating modal flow. */
+  openTauriFlow(): Promise<void>;
+  /** Open the browser file-picker fallback. */
+  openBrowserFlow(): Promise<void>;
 }
 
 export interface MountOptions {
@@ -57,6 +101,30 @@ export interface MountOptions {
   readonly audio?: AudioController;
   readonly storage?: StorageBackend;
   readonly now?: () => number;
+  /**
+   * Wiring for the Phase 11 New Campaign button. When provided, the
+   * button is mounted on the main menu and dispatches to these flows
+   * on click. When omitted, the button is not rendered (tests that
+   * don't exercise the procgen path don't need to supply it).
+   */
+  readonly newCampaignFlow?: NewCampaignFlowDeps;
+  /**
+   * Reader the harness uses to resume a procgen campaign from its
+   * on-disk LibraryEntry.sourcePath. Production wires this to
+   * `readCampaignFile` from `src/campaign/procgen/api.ts`. Omitted
+   * in browser mode (the library still renders the entries but
+   * Resume is disabled).
+   */
+  readonly procgenReader?: (path: string) => Promise<string>;
+  /**
+   * Surface called when a procgen library load fails. Lets main.ts
+   * show the per-class error modal without dragging that module into
+   * harness.ts.
+   */
+  readonly onProcgenLoadError?: (
+    err: unknown,
+    entry: { campaignId: string; sourcePath: string },
+  ) => void;
 }
 
 export function mountCampaignHarness(
@@ -72,6 +140,13 @@ export function mountCampaignHarness(
   let campaign: RawCampaign | null = null;
   let save: CampaignSave | null = null;
   let activeBuiltIn: BuiltInCampaign | null = null;
+  /**
+   * Phase 11: when a procgen campaign is loaded, the harness keeps
+   * its synthesized id + on-disk source path so the LibraryIndex
+   * entry can be upserted correctly on every render. Both `null` for
+   * the main menu / when no procgen is loaded.
+   */
+  let activeProcgen: { campaignId: string; sourcePath: string } | null = null;
   let activeSession: ReturnType<typeof mountPuzzleSession> | null = null;
   let applied: AppliedTheme | null = null;
 
@@ -99,6 +174,7 @@ export function mountCampaignHarness(
     }
     campaign = parsed;
     activeBuiltIn = b;
+    activeProcgen = null;
     // Load or initialize save.
     const hash = manifestHash(b.manifest);
     const result = loadSave(storage, b.id, hash);
@@ -138,6 +214,116 @@ export function mountCampaignHarness(
     return applied?.vocab ?? {};
   }
 
+  function loadGeneratedManifest(manifestJson: string, sourcePath: string, seedUsed: string): void {
+    // 1. JSON.parse — `SyntaxError` thrown to caller.
+    const parsedJson: unknown = JSON.parse(manifestJson);
+    // 2. parseCampaign — `CampaignParseError` thrown to caller.
+    const parsed = parseCampaign(parsedJson);
+    // 3. Synthesize a unique campaign id. Time-stamped so repeated
+    //    regenerations with the same seed don't collide.
+    const campaignId = `procgen-${seedUsed}-${now()}`;
+    // 4. Build an empty save and store it.
+    save = emptySave(campaignId, parsedJson);
+    writeSave(storage, save);
+    // 5. Set in-memory state.
+    campaign = parsed;
+    activeBuiltIn = null;
+    activeProcgen = { campaignId, sourcePath };
+    const themeOpts = audio ? { audio } : {};
+    applied = applyTheme(parsed.theme, themeOpts);
+    if (typeof window !== 'undefined') {
+      (window as Window & typeof globalThis).__theme = applied;
+    }
+    // 6. Library upsert is handled by persist() inside render().
+    state = { kind: 'act_intro', actIndex: 0 };
+    render();
+  }
+
+  async function loadCampaignFromSourcePath(
+    sourcePath: string,
+    seedUsed: string,
+    reader: (path: string) => Promise<string>,
+  ): Promise<void> {
+    const text = await reader(sourcePath);
+    loadGeneratedManifest(text, sourcePath, seedUsed);
+  }
+
+  function renderProcgenLibrary(host: HTMLElement): void {
+    const lib = readLibrary(storage);
+    const builtInIds = new Set(builtIns.map((b) => b.id));
+    const procgenEntries = lib.entries.filter(
+      (e) => !builtInIds.has(e.campaignId) && e.campaignId !== 'tutorial',
+    );
+    if (procgenEntries.length === 0) return;
+    const header = document.createElement('h3');
+    header.textContent = 'Generated campaigns';
+    header.style.cssText = 'margin: 8px 0 4px 0; font-size: 14px; color: var(--muted);';
+    host.appendChild(header);
+    const list = document.createElement('div');
+    list.dataset['role'] = 'procgen-library';
+    list.style.cssText = 'display: flex; flex-direction: column; gap: 6px;';
+    for (const e of procgenEntries) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; gap: 6px; align-items: stretch;';
+      row.dataset['campaignId'] = e.campaignId;
+      if (e.sourcePath) row.dataset['sourcePath'] = e.sourcePath;
+
+      const loadBtn = document.createElement('button');
+      loadBtn.type = 'button';
+      loadBtn.dataset['role'] = 'load-procgen';
+      loadBtn.textContent = `${e.completed ? '✓ ' : ''}${e.themeName}`;
+      const hasDisk = typeof e.sourcePath === 'string' && e.sourcePath.length > 0;
+      const canLoad = hasDisk && typeof opts.procgenReader === 'function';
+      loadBtn.disabled = !canLoad;
+      loadBtn.title = canLoad
+        ? `Resume ${e.themeName}`
+        : hasDisk
+          ? 'Re-import the manifest file to continue.'
+          : 'File not available in browser mode.';
+      loadBtn.style.cssText = `
+        flex: 1; text-align: left; padding: 8px 12px;
+        background: var(--surface); color: var(--fg);
+        border: 1px solid var(--muted); border-radius: 4px;
+        cursor: ${canLoad ? 'pointer' : 'not-allowed'};
+        font: inherit;
+      `;
+      if (canLoad) {
+        const reader = opts.procgenReader!;
+        const sourcePath = e.sourcePath!;
+        // Recover the seed prefix from the synthesized campaignId
+        // ("procgen-<seed>-<ts>"). Falls back to '' if the format is
+        // unexpected; loadGeneratedManifest will re-derive from the
+        // manifest itself anyway.
+        const seedUsed = recoverSeedFromCampaignId(e.campaignId);
+        loadBtn.addEventListener('click', () => {
+          void loadCampaignFromSourcePath(sourcePath, seedUsed, reader).catch((err) => {
+            opts.onProcgenLoadError?.(err, { campaignId: e.campaignId, sourcePath });
+          });
+        });
+      }
+      row.appendChild(loadBtn);
+
+      const rmBtn = document.createElement('button');
+      rmBtn.type = 'button';
+      rmBtn.dataset['role'] = 'remove-procgen';
+      rmBtn.textContent = '✕';
+      rmBtn.title = 'Remove from library';
+      rmBtn.style.cssText = `
+        padding: 4px 8px; background: var(--bg); color: var(--muted);
+        border: 1px solid var(--muted); border-radius: 4px; cursor: pointer;
+        font: inherit;
+      `;
+      rmBtn.addEventListener('click', () => {
+        removeLibraryEntry(storage, e.campaignId);
+        render();
+      });
+      row.appendChild(rmBtn);
+
+      list.appendChild(row);
+    }
+    host.appendChild(list);
+  }
+
   function resumeStateFor(c: RawCampaign, s: CampaignSave): CampaignState {
     for (let i = 0; i < c.acts.length; i++) {
       const act = c.acts[i]!;
@@ -160,6 +346,17 @@ export function mountCampaignHarness(
         lastPlayed: save.lastPlayed,
         completed: state.kind === 'ending',
       });
+    } else if (activeProcgen) {
+      const entry: LibraryEntry = {
+        campaignId: activeProcgen.campaignId,
+        themeName: campaign.theme.name,
+        lastPlayed: save.lastPlayed,
+        completed: state.kind === 'ending',
+        // Only persist the path when we actually have one; the
+        // browser-import path passes '' since there's no on-disk file.
+        ...(activeProcgen.sourcePath.length > 0 ? { sourcePath: activeProcgen.sourcePath } : {}),
+      };
+      upsertLibraryEntry(storage, entry);
     }
   }
 
@@ -172,6 +369,20 @@ export function mountCampaignHarness(
     switch (state.kind) {
       case 'main_menu':
         renderMainMenu(container, builtIns, (id) => loadCampaign(id));
+        // Phase 11: prepend the New Campaign button + the procgen
+        // library entries above the built-in list. The architect
+        // doc places it above the built-ins because procgen is the
+        // expected post-tutorial entry point.
+        if (opts.newCampaignFlow) {
+          const ncfHost = document.createElement('div');
+          ncfHost.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+          // Insert at the top of `container`, before the existing
+          // "Pick a campaign…" intro.
+          container.insertBefore(ncfHost, container.firstChild);
+          mountNewCampaignButton(ncfHost, opts.newCampaignFlow);
+        }
+        // Render any procgen LibraryEntry that isn't a built-in.
+        renderProcgenLibrary(container);
         break;
       case 'act_intro':
         if (!campaign) return;
@@ -248,6 +459,11 @@ export function mountCampaignHarness(
     appliedTheme: () => applied,
     dispatch,
     loadCampaign,
+    loadGeneratedManifest,
+    loadCampaignFromSourcePath,
+    refreshMainMenu(): void {
+      if (state.kind === 'main_menu') render();
+    },
     destroy() {
       activeSession?.destroy();
       activeSession = null;
@@ -476,6 +692,19 @@ function renderEnding(
   back.style.cssText = primaryButtonCss();
   back.addEventListener('click', onReturn);
   container.appendChild(back);
+}
+
+/**
+ * Procgen library ids are synthesized as `procgen-<seed>-<unix-ts>`.
+ * Recover the `<seed>` for resume convenience. The actual manifest
+ * carries the seed too — this is only useful before the manifest is
+ * parsed, e.g. in the read-pipeline error path.
+ */
+function recoverSeedFromCampaignId(id: string): string {
+  if (!id.startsWith('procgen-')) return '';
+  const rest = id.slice('procgen-'.length);
+  const lastDash = rest.lastIndexOf('-');
+  return lastDash < 0 ? rest : rest.slice(0, lastDash);
 }
 
 function renderError(container: HTMLElement, message: string): void {

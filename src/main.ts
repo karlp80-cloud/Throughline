@@ -14,6 +14,10 @@
 import { mountCanvasFromQueryString } from './app/canvasMount';
 import { AudioController, mountVolumeMixer, WebAudioBackend } from './audio';
 import { mountCampaignHarness, type CampaignHarnessHandle } from './campaign/dom/harness';
+import { LocalStorageBackend } from './campaign/storage';
+import { isTauri } from './platform';
+import { openBrowserFlow, openTauriFlow } from './campaign/procgen/flow';
+import { readCampaignFile } from './campaign/procgen/api';
 import type { EditorHandle } from './editor';
 import type { PlaybackHandle } from './playback';
 import type { AppliedTheme } from './theme';
@@ -65,7 +69,41 @@ if (app) {
     sub.id = 'campaign-root';
     sub.style.cssText = 'margin: 0 12px; max-width: 700px;';
     app.appendChild(sub);
-    const harness = mountCampaignHarness(sub, audio ? { audio } : {});
+    // Forward-declare the harness so the flow closures can resolve it
+    // — the harness needs the flow at mount time, the flow callbacks
+    // need the harness when they fire.
+    let harnessRef: CampaignHarnessHandle | null = null;
+    const storage = new LocalStorageBackend();
+    const flowHost = sub;
+    const harness = mountCampaignHarness(sub, {
+      ...(audio ? { audio } : {}),
+      storage,
+      newCampaignFlow: {
+        isTauri,
+        openTauriFlow: async () => {
+          if (!harnessRef) return;
+          await openTauriFlow({ host: flowHost, storage, harness: harnessRef });
+          harnessRef.refreshMainMenu();
+        },
+        openBrowserFlow: async () => {
+          if (!harnessRef) return;
+          await openBrowserFlow({ host: flowHost, storage, harness: harnessRef });
+          harnessRef.refreshMainMenu();
+        },
+      },
+      ...(isTauri()
+        ? {
+            procgenReader: readCampaignFile,
+            onProcgenLoadError: (err) => {
+              // Defer logging to console; main.ts is the only place
+              // that knows the storage/host wiring. A proper modal
+              // happens through harness's renderError path.
+              console.warn('[procgen] load-from-source failed:', err);
+            },
+          }
+        : {}),
+    });
+    harnessRef = harness;
     window.__campaign = harness;
   }
 }
