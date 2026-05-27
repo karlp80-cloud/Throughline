@@ -7,6 +7,7 @@ import {
   emptySave,
   loadSave,
   markPuzzleComplete,
+  readLibrary,
   registerMigration,
   removeLibraryEntry,
   SAVE_VERSION,
@@ -190,5 +191,71 @@ describe('library', () => {
     upsertLibraryEntry(s, { campaignId: 'a', themeName: 'A', lastPlayed: 100, completed: false });
     const after = JSON.parse(s.read('throughline:library')!) as { entries: unknown[] };
     expect(after.entries).toHaveLength(1);
+  });
+
+  // Phase 11: additive optional `sourcePath` field on LibraryEntry.
+  // Generated campaigns store the absolute path of the on-disk
+  // manifest so the harness can re-load it from the LibraryIndex on
+  // launch. Built-in entries omit the field; the defensive shape
+  // filter in `readLibrary` must accept both.
+
+  test('sourcePath round-trips intact through write/read', () => {
+    const s = new MemoryStorageBackend();
+    upsertLibraryEntry(s, {
+      campaignId: 'procgen-abc-1',
+      themeName: 'Generated Theme',
+      lastPlayed: 100,
+      completed: false,
+      sourcePath: 'C:\\Users\\karlp\\AppData\\Roaming\\org.throughline.app\\campaigns\\abc-1.json',
+    });
+    const lib = readLibrary(s);
+    expect(lib.entries).toHaveLength(1);
+    expect(lib.entries[0]?.sourcePath).toBe(
+      'C:\\Users\\karlp\\AppData\\Roaming\\org.throughline.app\\campaigns\\abc-1.json',
+    );
+  });
+
+  test('entries without sourcePath continue to round-trip (built-ins)', () => {
+    const s = new MemoryStorageBackend();
+    upsertLibraryEntry(s, {
+      campaignId: 'demo-two-act',
+      themeName: 'The Workshop',
+      lastPlayed: 50,
+      completed: true,
+    });
+    const lib = readLibrary(s);
+    expect(lib.entries).toHaveLength(1);
+    expect(lib.entries[0]?.sourcePath).toBeUndefined();
+  });
+
+  test('defensive filter rejects entries with non-string sourcePath', () => {
+    const s = new MemoryStorageBackend();
+    // Hand-craft a library blob with one valid entry and one
+    // entry whose `sourcePath` is a wrong type (number). The
+    // filter must drop the bad entry and keep the good one.
+    s.write(
+      'throughline:library',
+      JSON.stringify({
+        version: 1,
+        entries: [
+          {
+            campaignId: 'good',
+            themeName: 'OK',
+            lastPlayed: 1,
+            completed: false,
+            sourcePath: '/x/y.json',
+          },
+          {
+            campaignId: 'bad',
+            themeName: 'NO',
+            lastPlayed: 2,
+            completed: false,
+            sourcePath: 42, // wrong type
+          },
+        ],
+      }),
+    );
+    const lib = readLibrary(s);
+    expect(lib.entries.map((e) => e.campaignId)).toEqual(['good']);
   });
 });

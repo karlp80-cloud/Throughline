@@ -45,6 +45,12 @@ export interface LibraryEntry {
   readonly themeName: string;
   readonly lastPlayed: number;
   readonly completed: boolean;
+  /**
+   * Absolute path of the on-disk manifest for procgen-generated
+   * campaigns; absent for built-ins (whose manifest is bundled).
+   * Phase 11 addition — additive optional, no LIBRARY_VERSION bump.
+   */
+  readonly sourcePath?: string;
 }
 
 export interface LibraryIndex {
@@ -172,6 +178,9 @@ export function readLibrary(storage: StorageBackend): LibraryIndex {
       return { version: LIBRARY_VERSION, entries: [] };
     }
     // Defensive: filter entries that don't match the expected shape.
+    // Phase 11: `sourcePath` is optional but, when present, must be a
+    // string. A wrong-typed `sourcePath` is treated as corruption and
+    // the whole entry is dropped (not silently coerced).
     const cleaned = parsed.entries.filter(
       (e): e is LibraryEntry =>
         e !== null &&
@@ -179,7 +188,9 @@ export function readLibrary(storage: StorageBackend): LibraryIndex {
         typeof (e as LibraryEntry).campaignId === 'string' &&
         typeof (e as LibraryEntry).themeName === 'string' &&
         typeof (e as LibraryEntry).lastPlayed === 'number' &&
-        typeof (e as LibraryEntry).completed === 'boolean',
+        typeof (e as LibraryEntry).completed === 'boolean' &&
+        (typeof (e as LibraryEntry).sourcePath === 'undefined' ||
+          typeof (e as LibraryEntry).sourcePath === 'string'),
     );
     return { version: LIBRARY_VERSION, entries: cleaned };
   } catch {
