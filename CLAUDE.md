@@ -13,17 +13,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phases 0–9 complete; Phase 9 awaiting human playtester review.** Origin: https://github.com/karlp80-cloud/Throughline.
+**Phases 0–10 coder-complete; Phase 10 awaiting Reviewer.** Origin: https://github.com/karlp80-cloud/Throughline.
 
-Phase 9 added `campaigns/tutorial.json` — *The Apprentice's Manual*. Six hand-built puzzles teaching one mechanic each (conveyor → splitter → agent → filter → merger → reactor), with mentor lines in `briefing` using generic vocabulary that gels with any later procgen theme. `campaigns/tutorial.solutions.ts` carries reference solutions; a unit test asserts every reference wins, and `e2e/tutorial.spec.ts` walks the whole 6-puzzle act to the ending in ~9s. Curriculum doc at [docs/curriculum/tutorial.md](docs/curriculum/tutorial.md). Tutorial is the FIRST built-in on the main menu now.
+Phase 10 added the companion CLI under `cli/`. Modules:
+- `solver/prng.ts` — splitmix64 PRNG + FNV-1a hash (the only place pseudo-randomness lives).
+- `writer.ts` — atomic temp+fsync+rename; three-policy path safety (inside-CWD; parent must exist; parent's realpath inside CWD).
+- `validator.ts` — wraps `parseCampaign`; strips a single optional Markdown code fence; returns `ValidationResult` (never throws).
+- `solver/candidate.ts` + `solver/index.ts` — connectivity-biased random candidates, iterated until victory or budget exhausts. Reuses Phase 1's `runUntilHalt` unchanged.
+- `promptBuilder.ts` + `prompts/system.md` — checked-in markdown (~15.5 KB, under the 30 KB argv envelope); all dynamic content in `buildUserPrompt`.
+- `claudeSpawn.ts` — security-critical subprocess wrapper: `spawn('claude', argv, { shell: false, ... })`, user prompt via stdin, 4 KB stderr cap, 60 s timeout with SIGTERM → SIGKILL after 2 s grace.
+- `generator.ts` — state machine: 3 manifest retries with feedback, then 3 per-puzzle regens. Seeded backoff for reproducible retry timing. Hard ceiling 3 + 3 × max_puzzles LLM calls.
+- `index.ts` — CLI entry via `node:util.parseArgs`. Exit codes 0/1/2/3/4/5 per architect §9.3.
 
-Filter/reactor placement now resolves the config from the puzzle. Each puzzle that lists `filter` or `reactor` in `available_tiles` must also declare `filter_types` / `reactor_recipes` (enforced post-Zod). The editor pre-fills the placement Mode with the first option and surfaces a picker row when multiple options exist; tutorial puzzles declare exactly one option each.
+Built via `cli/build.mjs` (tsc --noEmit + esbuild bundle) → `dist-cli/throughline-gen.mjs`. Bin wrapper: `bin/throughline-gen`. Static-analysis canaries (`no-shell.test.ts`, `no-eval.test.ts`, `system-prompt-shape.test.ts`, `schema-shape.test.ts`) encode the reviewer checklist as tests.
 
-**Tally:** 388 unit (+10 placement-config) + 15 e2e. Tsc + lint clean. CI green at each push.
+**Tally:** 511 unit (+135 cli) + 15 e2e. Tsc + lint clean. 1 unit test skipped on Windows (symlink test — symlink creation needs admin). Live-LLM integration test gated by `RUN_LIVE_LLM=1`, never runs in CI.
 
-**Pending:** Phase 9 human-playtester review — recruit 2-3 people who haven't seen Throughline, hand them `npm run dev`, file findings in `docs/playtest/tutorial-<initials>.md`. Patterns across testers (not single-tester noise) drive any mentor-copy or constraint iteration.
+**Pending:** Phase 9 human-playtester review (carried forward); Phase 10 Reviewer pass — checklist in IMPLEMENTATION_PLAN.md § Phase 10 Reviewer; every item cross-references a test under §10 / §12 of `docs/architecture/cli.md`. A real `claude -p` smoke run (`RUN_LIVE_LLM=1 npx vitest run cli/integration/`) should also happen before merge.
 
-**Next:** Phase 10 — Companion CLI (`throughline-gen`). **Full cycle**. The last big review-heavy phase. Security-relevant: subprocess to `claude -p`, Zod validation of LLM output, retry loop with bounded backoff, automated solvability check. The plan calls it "the most important review pass in the project."
+**Next:** Phase 11 — E2E procgen integration (Tauri side spawns `throughline-gen`, surfaces progress, loads the produced manifest into the game).
 
 When a phase completes, update this section to point at the next phase.
 
