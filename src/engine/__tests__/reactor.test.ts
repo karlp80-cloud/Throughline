@@ -84,7 +84,10 @@ describe('reactor', () => {
 
   test('reactor without a recipe field emits no intents (defensive)', () => {
     const tile = reactor([3, 4], 'E', { inputs: [], output: '' });
-    const broken = { ...tile, recipe: undefined };
+    // Strip `recipe` cleanly so the resulting object is `PlacedTile` shaped
+    // under exactOptionalPropertyTypes (no `recipe: undefined` field).
+    const { recipe: _omitted, ...broken } = tile;
+    void _omitted;
     const world = makeWorld({ cargo: cargoMap({ '3,4': [cargo(1, 'alpha')] }) });
     expect(reactorIntents(broken, world)).toEqual([]);
   });
