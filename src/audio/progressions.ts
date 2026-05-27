@@ -8,12 +8,21 @@
 
 import type { ChordProgression } from './types';
 
-/** A i–VI–III–VII progression in A minor with extensions. Plaintive, looping. */
+/**
+ * 8-chord progression in A minor. First half is the "classic"
+ * Am7 / Fmaj7 / Cmaj7 / G7 turnaround; second half pivots through
+ * Dm7 → Em7 → Am7 → Fmaj7 to give the loop a clear A/B feel and
+ * delay the obvious "we're repeating" moment.
+ */
 export const DEFAULT_PROGRESSION: ChordProgression = [
   { notes: ['A3', 'C4', 'E4', 'G4'], durationBeats: 4 }, // Am7
   { notes: ['F3', 'A3', 'C4', 'E4'], durationBeats: 4 }, // Fmaj7
   { notes: ['C3', 'E3', 'G3', 'B3'], durationBeats: 4 }, // Cmaj7
   { notes: ['G3', 'B3', 'D4', 'F4'], durationBeats: 4 }, // G7
+  { notes: ['D3', 'F3', 'A3', 'C4'], durationBeats: 4 }, // Dm7
+  { notes: ['E3', 'G3', 'B3', 'D4'], durationBeats: 4 }, // Em7
+  { notes: ['A3', 'C4', 'E4', 'G4'], durationBeats: 4 }, // Am7
+  { notes: ['F3', 'A3', 'C4', 'E4'], durationBeats: 4 }, // Fmaj7
 ];
 
 /**
