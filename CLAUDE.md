@@ -13,7 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phase 0 complete & shipped.** Skeleton (TS + Vite + Vitest + Playwright + ESLint + Prettier + GH Actions) green locally and on CI. Origin: https://github.com/karlp80-cloud/Throughline. **Phase 1 in progress** — currently in the Architect step (memo at `docs/architecture/engine.md`); no engine code yet. See [IMPLEMENTATION_PLAN.md § Phase 1](IMPLEMENTATION_PLAN.md) for the Full-cycle plan (Architect → Coder → Reviewer with the verbatim engine-invariants checklist).
+**Phase 1 Coder complete; awaiting Reviewer step.** Origin: https://github.com/karlp80-cloud/Throughline. Engine surface at `src/engine/` is feature-complete: 5 tile types, 5 agent ops (with SENSE branching), 4-phase cycle pipeline (`step.ts`), `runUntilHalt`, 94 tests across 13 files passing (6 conveyor, 7 splitter, 3 merger, 5 filter, 8 reactor, 15 ops, 19 step, 6 run, 5 snapshot, 10 corpus, 7 conservation property, 2 determinism property, 1 purity static check). Engine memo at [docs/architecture/engine.md](docs/architecture/engine.md) was revised once during coding when the reactor design needed dual react-or-transport behavior. **Known gap:** corpus has 10 puzzles (plan calls for 50) — documented in `src/engine/__tests__/fixtures/corpus.ts`.
+
+**Next:** Phase 1 Reviewer — see [IMPLEMENTATION_PLAN.md § Phase 1 Reviewer](IMPLEMENTATION_PLAN.md) for the verbatim checklist (fresh context recommended).
 
 When a phase completes, update this section to point at the next phase.
 
