@@ -819,11 +819,9 @@ Calls where the spec is silent or admits multiple reasonable answers. Recommende
 - **(a) No.** Recommended. The path lives in the app data dir; the user doesn't see it. Reduces decisions in the modal.
 - (b) Yes — show a "Save to:" field. Adds another path-safety surface (the CLI's `--out` would receive user input).
 
-**Q3. Does the New Campaign button appear before or after the tutorial is completed?**
-- **(a) Before — always visible.** Recommended for simplicity (one UI; the modal copy guides the user). A separate hint in the tutorial outro encourages "now click New Campaign."
-- (b) Gated until tutorial completion (matches the design doc's "tutorial outro unlocks New Campaign" line). More polish but more state; adds a brand-new gate to the state machine.
-
-(The design doc Phase 9 line "Outro: 'You are sent into the field' → unlocks *New Campaign* button" is consistent with (b). Recommending (a) on tractability grounds for v1; the tutorial outro can still *mention* the New Campaign button — visibility doesn't have to be conditioned on completion. **Flag for human review.**)
+**Q3. Does the New Campaign button appear before or after the tutorial is completed? — RESOLVED: always visible.**
+- **(a) Before — always visible.** *Locked in.* Simpler UI; modal copy guides the user. The tutorial outro's existing "you are sent into the field" line *mentions* the New Campaign button but visibility is unconditional. The design doc Phase 9 "unlocks" line is interpreted as narrative framing rather than a literal gate.
+- (b) Gated until tutorial completion. Not taken.
 
 **Q4. Do we keep the generating modal's progress as just an elapsed counter, or expose CLI sub-phases?**
 - **(a) Elapsed counter only.** Recommended for v1. The CLI's internal phases (build prompt / spawn / validate / solver / write) aren't exposed over IPC; adding that machinery is churn.
@@ -845,9 +843,9 @@ Calls where the spec is silent or admits multiple reasonable answers. Recommende
 - **(a) No.** Recommended. Advanced flags; clutter for the common case.
 - (b) Yes, behind an "Advanced" disclosure. Optional polish; consider in Phase 12.
 
-**Q9. Does Phase 11 add `node` as a Tauri sidecar (bundled binary) or rely on user-installed Node?**
-- **(a) Rely on user-installed Node ≥ 20.** Recommended for v1. The CLI is a Node script; bundling Node into the desktop app adds ~50 MB and platform-specific build complexity (3 sidecars: macOS x64, macOS arm64, Windows, Linux). The README documents the Node requirement.
-- (b) Bundle Node as a sidecar. More polished; defer to Phase 12 if user feedback shows it's needed.
+**Q9. Does Phase 11 add `node` as a Tauri sidecar (bundled binary) or rely on user-installed Node? — RESOLVED: rely on user-installed Node.**
+- **(a) Rely on user-installed Node ≥ 20.** *Locked in.* The desktop app expects `node` on PATH; the README documents it; the `BinaryNotFound` modal copy points at the install docs when it's missing. Saves ~50 MB bundle weight + the sidecar build complexity. Phase 12 can revisit if installation friction proves to be a real problem.
+- (b) Bundle Node as a sidecar. Deferred to a possible Phase 12 followup if needed.
 
 **Q10. Should the browser fallback's file picker also display a "drag-and-drop" zone?**
 - **(a) Just the button.** Recommended for v1.
