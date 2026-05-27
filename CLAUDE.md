@@ -13,9 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phase 1 Coder complete; awaiting Reviewer step.** Origin: https://github.com/karlp80-cloud/Throughline. Engine surface at `src/engine/` is feature-complete: 5 tile types, 5 agent ops (with SENSE branching), 4-phase cycle pipeline (`step.ts`), `runUntilHalt`, 94 tests across 13 files passing (6 conveyor, 7 splitter, 3 merger, 5 filter, 8 reactor, 15 ops, 19 step, 6 run, 5 snapshot, 10 corpus, 7 conservation property, 2 determinism property, 1 purity static check). Engine memo at [docs/architecture/engine.md](docs/architecture/engine.md) was revised once during coding when the reactor design needed dual react-or-transport behavior. **Known gap:** corpus has 10 puzzles (plan calls for 50) — documented in `src/engine/__tests__/fixtures/corpus.ts`.
+**Phase 1 complete & reviewed.** Origin: https://github.com/karlp80-cloud/Throughline. Engine surface at `src/engine/` is feature-complete: 5 tile types, 5 agent ops (with SENSE branching), 4-phase cycle pipeline (`step.ts`), `runUntilHalt`. **135 engine tests** across 13 files: 8 reactor + 7 splitter + 6 conveyor + 5 filter + 3 merger + 15 ops + 19 step + 6 run + 5 snapshot + **50 corpus** + 7 conservation property (200 generated + 6 edge cases) + 2 determinism property (200 generated + 1 hand) + 1 purity static check. Engine memo at [docs/architecture/engine.md](docs/architecture/engine.md) was revised during coding (reactor became dual react-or-transport; splitter alternation clarified as per-cargo). Phase 1 Reviewer (fresh-context subagent) verified all five checklist items; both findings (Map iteration determinism, generator weakness) plus two observations (as-cast cleanup, corpus 10→50) were addressed.
 
-**Next:** Phase 1 Reviewer — see [IMPLEMENTATION_PLAN.md § Phase 1 Reviewer](IMPLEMENTATION_PLAN.md) for the verbatim checklist (fresh context recommended).
+**Next:** Phase 2 — Canvas Renderer. See [IMPLEMENTATION_PLAN.md § Phase 2](IMPLEMENTATION_PLAN.md). Cycle: **Light** (architect notes + coder + manual visual review; no separate reviewer step unless screenshot tests prove flaky).
 
 When a phase completes, update this section to point at the next phase.
 
