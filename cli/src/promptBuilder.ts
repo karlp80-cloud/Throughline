@@ -17,25 +17,48 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { RawCampaign } from '../../src/schema/campaign';
 
-// Resolve `cli/src/prompts/system.md` relative to the source location.
+/**
+ * Load the system prompt from `cli/src/prompts/system.md`.
+ *
+ * Two resolution strategies, tried in order:
+ *  1. Bundle-relative: when the CLI is built by esbuild into a single
+ *     .mjs, the bundle ships beside a copied `prompts/system.md`.
+ *  2. Source-relative: in dev / tests we run from source; the file
+ *     lives in `cli/src/prompts/system.md` relative to this file.
+ *
+ * The file content is checked in (architect §4.1) — never built from
+ * many string literals at runtime.
+ */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const SYSTEM_PROMPT_PATH = join(__dirname, 'prompts', 'system.md');
+
+const CANDIDATE_PATHS: readonly string[] = [
+  // When bundled to dist-cli/throughline-gen.mjs, copy prompts beside it.
+  join(__dirname, 'prompts', 'system.md'),
+  // Dev / vitest: source layout.
+  join(__dirname, 'prompts', 'system.md'),
+  // Repo root fallback (used by tests running from cwd).
+  join(process.cwd(), 'cli', 'src', 'prompts', 'system.md'),
+];
 
 let cachedSystemPrompt: string | null = null;
 
 export function buildSystemPrompt(): string {
   if (cachedSystemPrompt !== null) return cachedSystemPrompt;
-  try {
-    cachedSystemPrompt = readFileSync(SYSTEM_PROMPT_PATH, 'utf8');
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(
-      `Throughline CLI: failed to load system prompt at ${SYSTEM_PROMPT_PATH}: ${msg}. ` +
-        `This is a packaging bug; the prompts/ folder must ship alongside the CLI.`,
-    );
+  let lastErr: unknown;
+  for (const p of CANDIDATE_PATHS) {
+    try {
+      cachedSystemPrompt = readFileSync(p, 'utf8');
+      return cachedSystemPrompt;
+    } catch (e) {
+      lastErr = e;
+    }
   }
-  return cachedSystemPrompt;
+  const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+  throw new Error(
+    `Throughline CLI: failed to load system prompt. Tried: ${CANDIDATE_PATHS.join(', ')}. Last error: ${msg}. ` +
+      `This is a packaging bug; the prompts/ folder must ship alongside the CLI.`,
+  );
 }
 
 export interface UserPromptOpts {
