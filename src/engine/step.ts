@@ -86,6 +86,20 @@ function cloneToDraft(w: WorldState): DraftWorld {
   };
 }
 
+/**
+ * Narrow a DraftWorld to the readonly WorldState shape.
+ *
+ * The two share the same structural fields; DraftWorld's inner
+ * arrays/records are mutable, WorldState's are readonly. TS
+ * structural typing permits the assignment because readonly is a
+ * relaxation. This helper makes the intent explicit instead of
+ * using `as unknown as WorldState` casts, which would tunnel
+ * through any future field divergence.
+ */
+function freezeDraft(d: DraftWorld): WorldState {
+  return d;
+}
+
 // ─── Geometry helpers ──────────────────────────────────────────────
 function inBounds(p: Pos, grid: { w: number; h: number }): boolean {
   return p[0] >= 0 && p[0] < grid.w && p[1] >= 0 && p[1] < grid.h;
@@ -140,7 +154,7 @@ export function stepOnce(
   }
 
   // ─── Phase A snapshot ───────────────────────────────────────────
-  const snapshot: WorldState = cloneToDraft(draft) as unknown as WorldState;
+  const snapshot: WorldState = freezeDraft(cloneToDraft(draft));
 
   // ─── Phase A: tile intents (sorted by posKey for determinism) ───
   const sortedTiles = solution.tiles
@@ -278,7 +292,7 @@ export function stepOnce(
     }
   }
 
-  const worldAfter = draft as unknown as WorldState;
+  const worldAfter = freezeDraft(draft);
   return {
     world: worldAfter,
     trace: {
