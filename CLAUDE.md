@@ -13,15 +13,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phases 0–3 complete and playtest-approved.** Origin: https://github.com/karlp80-cloud/Throughline. Default route (`/`) mounts the editor; `?fixture=NAME` shows a static Phase-2 render.
+**Phases 0–4 complete; Phase 4 awaiting manual feel review.** Origin: https://github.com/karlp80-cloud/Throughline. Default route (`/`) mounts the editor with a small solvable puzzle; the top-level **▶ Run** button swaps to playback (canvas + Play/Pause/Step/Reset/speed-selector); Reset returns to the editor.
 
-Two playtest-driven render fixes after the initial Phase 3 push:
-- Splitter / merger glyphs were too similar — redesigned as ⊢ / ⊣ T-shapes with an input-square / output-arrowhead marker (the marker is the disambiguator).
-- Rotation-symmetric tiles (filter hourglass, reactor hexagon) didn't show their facing — renderer now overlays a `facing_arrow` glyph for those.
+Phase 4 details: pure animator state machine consuming the engine's `CycleTrace[]` and stepping discrete frames (no inter-cycle interpolation yet — flagged as follow-up if feel review demands it). Speeds ×0.5/×1/×2/×4 with base 600ms/cycle. Memo at [docs/architecture/playback.md](docs/architecture/playback.md).
 
-**Tally:** 176 unit tests (135 engine + 5 palette + 35 editor reducer + 1 smoke) + 6 e2e (1 smoke + 4 renderer screenshot diffs + 1 editor construction). Tsc + lint clean. CI green at each push.
+**Tally:** 198 unit tests (135 engine + 5 palette + 35 editor + 22 animator + 1 smoke) + 8 e2e (smoke + 4 renderer screenshots + 1 editor + 2 playback). Tsc + lint clean. CI green at each push.
 
-**Next:** Phase 4 — Playback Controls. Light cycle. Animator interpolates between engine trace frames; play/pause/step/fast-forward UI.
+**Pending:** Phase 4 manual feel-review — open `npm run dev`, click Run, eyeball Step / Pause / speeds / Reset. File a note in `docs/playtest/phase-4.md` if discrete-frame stepping feels too stuttery.
+
+**Next:** Phase 5 — Win/Loss + Optional Challenges. **Full cycle** (Architect → Coder → Reviewer with the verbatim rule-DSL no-eval checklist).
 
 When a phase completes, update this section to point at the next phase.
 
