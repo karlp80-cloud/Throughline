@@ -22,10 +22,9 @@ import { dirname, isAbsolute, resolve, sep } from 'node:path';
 import type { RawCampaign } from '../../src/schema/campaign';
 
 export type WriterPathErrorKind =
-  | 'absolute-outside-cwd'
-  | 'symlink'
-  | 'parent-missing'
-  | 'traversal';
+  | 'absolute-outside-cwd' // resolved path falls outside CWD (covers both `..` and absolute escapes)
+  | 'symlink' // parent's realpath resolves outside CWD
+  | 'parent-missing'; // parent directory doesn't exist
 
 export class WriterPathError extends Error {
   readonly kind: WriterPathErrorKind;

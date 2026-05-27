@@ -33,9 +33,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const CANDIDATE_PATHS: readonly string[] = [
-  // When bundled to dist-cli/throughline-gen.mjs, copy prompts beside it.
-  join(__dirname, 'prompts', 'system.md'),
-  // Dev / vitest: source layout.
+  // Both bundled and source layouts resolve `prompts/system.md`
+  // beside this file: the build copies it to `dist-cli/prompts/system.md`
+  // alongside the bundled .mjs; in dev/tests, this file sits at
+  // `cli/src/prompts/promptBuilder.ts`'s parent dir, beside `prompts/`.
   join(__dirname, 'prompts', 'system.md'),
   // Repo root fallback (used by tests running from cwd).
   join(process.cwd(), 'cli', 'src', 'prompts', 'system.md'),

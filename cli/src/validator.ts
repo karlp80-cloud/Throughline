@@ -79,6 +79,19 @@ export function validate(rawStdout: string): ValidationResult {
         },
       };
     }
-    throw e;
+    // Architect §5.5: validator never throws. parseCampaign currently
+    // only throws CampaignParseError, but if a future schema-layer
+    // change ever lets something else escape, we still return a
+    // structured failure rather than crashing the generator's state
+    // machine.
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      ok: false,
+      failure: {
+        kind: 'schema',
+        message: `unexpected validator error: ${msg}`,
+        issues: [`unexpected error from parseCampaign: ${msg}`],
+      },
+    };
   }
 }

@@ -170,6 +170,33 @@ describe('claudeSpawn.run — timeout', () => {
     expect(child.killSignals).toContain('SIGTERM');
     vi.useRealTimers();
   });
+
+  // Reviewer L3: a regression that removed the SIGKILL escalation would
+  // leave the test suite green without this. We advance fake time past
+  // the 2s grace and assert SIGKILL was issued in addition to SIGTERM.
+  test('escalates to SIGKILL after grace period if child does not exit', async () => {
+    vi.useFakeTimers();
+    const child = makeFakeChild();
+    spawnMock.mockReturnValue(child);
+    const p = _run({ systemPrompt: '', userPrompt: '', timeoutMs: 100 });
+    // Cross the timeout threshold → SIGTERM fires, grace timer arms.
+    await vi.advanceTimersByTimeAsync(150);
+    expect(child.killSignals).toEqual(['SIGTERM']);
+    // Cross the 2s grace → SIGKILL fires.
+    await vi.advanceTimersByTimeAsync(2_100);
+    expect(child.killSignals).toContain('SIGKILL');
+    // Now let the promise settle.
+    child.emit('close', null);
+    let err: unknown;
+    try {
+      await p;
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(_ClaudeSpawnError);
+    expect((err as InstanceType<typeof _ClaudeSpawnError>).reason).toBe('timeout');
+    vi.useRealTimers();
+  });
 });
 
 describe('claudeSpawn.run — spawn failure', () => {

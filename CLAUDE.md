@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phases 0–10 coder-complete; Phase 10 awaiting Reviewer.** Origin: https://github.com/karlp80-cloud/Throughline.
+**Phases 0–10 complete; Phase 10 reviewer-approved.** Origin: https://github.com/karlp80-cloud/Throughline.
 
 Phase 10 added the companion CLI under `cli/`. Modules:
 - `solver/prng.ts` — splitmix64 PRNG + FNV-1a hash (the only place pseudo-randomness lives).
@@ -27,9 +27,16 @@ Phase 10 added the companion CLI under `cli/`. Modules:
 
 Built via `cli/build.mjs` (tsc --noEmit + esbuild bundle) → `dist-cli/throughline-gen.mjs`. Bin wrapper: `bin/throughline-gen`. Static-analysis canaries (`no-shell.test.ts`, `no-eval.test.ts`, `system-prompt-shape.test.ts`, `schema-shape.test.ts`) encode the reviewer checklist as tests.
 
-**Tally:** 511 unit (+135 cli) + 15 e2e. Tsc + lint clean. 1 unit test skipped on Windows (symlink test — symlink creation needs admin). Live-LLM integration test gated by `RUN_LIVE_LLM=1`, never runs in CI.
+**Tally:** 512 unit (+136 cli, +1 SIGKILL-escalation test) + 15 e2e. Tsc + lint clean. 1 unit test skipped on Windows (symlink test — symlink creation needs admin). Live-LLM integration test gated by `RUN_LIVE_LLM=1`, never runs in CI.
 
-**Pending:** Phase 9 human-playtester review (carried forward); Phase 10 Reviewer pass — checklist in IMPLEMENTATION_PLAN.md § Phase 10 Reviewer; every item cross-references a test under §10 / §12 of `docs/architecture/cli.md`. A real `claude -p` smoke run (`RUN_LIVE_LLM=1 npx vitest run cli/integration/`) should also happen before merge.
+Phase 10 reviewer verdict: **PASS-WITH-NOTES**; full report in [docs/reviews/phase-10.md](docs/reviews/phase-10.md). Three low-severity + two trivial findings all addressed in the wrap-up commit:
+- `src/editor/dom/opList.ts` help text now uses `createElement` + `textContent` (CLAUDE.md invariant #6 honored everywhere, not just where LLM data flows).
+- `cli/src/validator.ts` no longer rethrows on unrecognized errors — wraps into a structured `ValidationFailure`.
+- `cli/src/__tests__/claudeSpawn.test.ts` adds a fake-timer test that confirms SIGTERM → SIGKILL escalation after the 2 s grace.
+- `cli/src/promptBuilder.ts` duplicate `CANDIDATE_PATHS` entry removed.
+- `cli/src/writer.ts` dead `'traversal'` `WriterPathErrorKind` member removed.
+
+**Pending:** Phase 9 human-playtester review (carried forward); a real `claude -p` smoke run (`RUN_LIVE_LLM=1 npx vitest run cli/integration/`) before tagging release.
 
 **Next:** Phase 11 — E2E procgen integration (Tauri side spawns `throughline-gen`, surfaces progress, loads the produced manifest into the game).
 
