@@ -72,6 +72,7 @@
           "available_tiles": ["conveyor", "filter"],
           "available_ops": ["MOVE", "WAIT"],
           "constraints": { "max_tiles": 8, "max_cycles": 60 },
+          "filter_types": ["alpha"],
           "optional_challenges": []
         }
       ]

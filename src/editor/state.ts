@@ -9,11 +9,13 @@
 import type {
   AgentId,
   AgentSpec,
+  CargoType,
   Direction,
   Op,
   PlacedTile,
   Pos,
   Puzzle,
+  ReactorRecipe,
   Solution,
   TileKind,
 } from '../engine/types';
@@ -21,7 +23,15 @@ import type {
 // ─── Types ────────────────────────────────────────────────────────
 export type Mode =
   | { readonly kind: 'idle' }
-  | { readonly kind: 'placing-tile'; readonly tileKind: TileKind; readonly facing: Direction }
+  | {
+      readonly kind: 'placing-tile';
+      readonly tileKind: TileKind;
+      readonly facing: Direction;
+      /** Selected recipe when `tileKind === 'reactor'`. */
+      readonly recipe?: ReactorRecipe;
+      /** Selected filter type when `tileKind === 'filter'`. */
+      readonly filterType?: CargoType;
+    }
   | { readonly kind: 'drawing-path'; readonly agentId: AgentId }
   | { readonly kind: 'editing-ops'; readonly agentId: AgentId };
 
@@ -41,6 +51,8 @@ export type EditorAction =
   // Tile palette toolbar
   | { readonly type: 'SELECT_TILE_KIND'; readonly tileKind: TileKind }
   | { readonly type: 'ROTATE_PLACEMENT_FACING' }
+  | { readonly type: 'SELECT_PLACEMENT_RECIPE'; readonly recipe: ReactorRecipe }
+  | { readonly type: 'SELECT_PLACEMENT_FILTER_TYPE'; readonly filterType: CargoType }
   | { readonly type: 'CANCEL_MODE' }
   // Grid clicks (dispatch is mode-aware)
   | { readonly type: 'CLICK_CELL'; readonly pos: Pos }
@@ -122,13 +134,25 @@ export function initialEditorState(puzzle: Puzzle): EditorState {
 // ─── Reducer ──────────────────────────────────────────────────────
 export function reduce(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
-    case 'SELECT_TILE_KIND':
+    case 'SELECT_TILE_KIND': {
       if (!isTileKindAllowed(action.tileKind, state.puzzle)) return state;
-      return {
-        ...state,
-        mode: { kind: 'placing-tile', tileKind: action.tileKind, facing: 'E' },
-        selection: { kind: 'none' },
+      // Pre-fill recipe/filterType from the puzzle's pre-declared list.
+      // Tutorial puzzles declare exactly one — the editor auto-applies
+      // it. Puzzles with multiple options use the first as the default
+      // and the palette UI lets the player change it.
+      const mode: Mode = {
+        kind: 'placing-tile',
+        tileKind: action.tileKind,
+        facing: 'E',
+        ...(action.tileKind === 'reactor' && state.puzzle.reactorRecipes?.[0]
+          ? { recipe: state.puzzle.reactorRecipes[0] }
+          : {}),
+        ...(action.tileKind === 'filter' && state.puzzle.filterTypes?.[0]
+          ? { filterType: state.puzzle.filterTypes[0] }
+          : {}),
       };
+      return { ...state, mode, selection: { kind: 'none' } };
+    }
 
     case 'ROTATE_PLACEMENT_FACING':
       if (state.mode.kind !== 'placing-tile') return state;
@@ -136,6 +160,27 @@ export function reduce(state: EditorState, action: EditorAction): EditorState {
         ...state,
         mode: { ...state.mode, facing: rotateCW(state.mode.facing) },
       };
+
+    case 'SELECT_PLACEMENT_RECIPE': {
+      if (state.mode.kind !== 'placing-tile') return state;
+      if (state.mode.tileKind !== 'reactor') return state;
+      // Recipe must be one the puzzle pre-declared.
+      const ok = (state.puzzle.reactorRecipes ?? []).some(
+        (r) =>
+          r.output === action.recipe.output &&
+          r.inputs.length === action.recipe.inputs.length &&
+          r.inputs.every((t, i) => t === action.recipe.inputs[i]),
+      );
+      if (!ok) return state;
+      return { ...state, mode: { ...state.mode, recipe: action.recipe } };
+    }
+
+    case 'SELECT_PLACEMENT_FILTER_TYPE': {
+      if (state.mode.kind !== 'placing-tile') return state;
+      if (state.mode.tileKind !== 'filter') return state;
+      if (!(state.puzzle.filterTypes ?? []).includes(action.filterType)) return state;
+      return { ...state, mode: { ...state.mode, filterType: action.filterType } };
+    }
 
     case 'CANCEL_MODE':
       return { ...state, mode: { kind: 'idle' } };
@@ -226,7 +271,7 @@ function handleClickCell(state: EditorState, pos: Pos): EditorState {
     case 'idle':
       return handleClickIdle(state, pos);
     case 'placing-tile':
-      return handleClickPlacing(state, pos, state.mode.tileKind, state.mode.facing);
+      return handleClickPlacing(state, pos, state.mode);
     case 'drawing-path':
       return handleClickDrawingPath(state, pos, state.mode.agentId);
     case 'editing-ops':
@@ -243,13 +288,14 @@ function handleClickIdle(state: EditorState, pos: Pos): EditorState {
   return { ...state, selection: { kind: 'none' } };
 }
 
-function handleClickPlacing(
-  state: EditorState,
-  pos: Pos,
-  tileKind: TileKind,
-  facing: Direction,
-): EditorState {
+function handleClickPlacing(state: EditorState, pos: Pos, mode: Mode): EditorState {
+  if (mode.kind !== 'placing-tile') return state;
   if (isObstacleCell(pos, state.puzzle)) return state;
+  // Reactor/filter MUST have their config resolved before the tile lands
+  // on the grid; otherwise the engine treats them as inert (reactor
+  // returns no intents, filter passes nothing).
+  if (mode.tileKind === 'reactor' && !mode.recipe) return state;
+  if (mode.tileKind === 'filter' && !mode.filterType) return state;
   // Tiles CAN be placed on input and output cells — the engine processes
   // them uniformly with stand-alone tiles, and the input/output cell
   // still emits/receives cargo. Putting a conveyor on the input is the
@@ -257,7 +303,13 @@ function handleClickPlacing(
   const existingIdx = state.draft.tiles.findIndex(
     (t) => t.pos[0] === pos[0] && t.pos[1] === pos[1],
   );
-  const newTile: PlacedTile = { pos, kind: tileKind, facing };
+  const newTile: PlacedTile = {
+    pos,
+    kind: mode.tileKind,
+    facing: mode.facing,
+    ...(mode.tileKind === 'reactor' && mode.recipe ? { recipe: mode.recipe } : {}),
+    ...(mode.tileKind === 'filter' && mode.filterType ? { filterType: mode.filterType } : {}),
+  };
   let tiles: PlacedTile[];
   if (existingIdx >= 0) {
     tiles = state.draft.tiles.slice();

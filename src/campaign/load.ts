@@ -39,5 +39,14 @@ export function toEnginePuzzle(p: RawPuzzle): Puzzle {
       label: c.label,
       rule: c.rule,
     })),
+    ...(p.reactor_recipes
+      ? {
+          reactorRecipes: p.reactor_recipes.map((r) => ({
+            inputs: r.inputs,
+            output: r.output,
+          })),
+        }
+      : {}),
+    ...(p.filter_types ? { filterTypes: p.filter_types } : {}),
   };
 }

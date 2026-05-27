@@ -90,6 +90,13 @@ const OptionalChallenge = z
 const TileKindEnum = z.enum(['conveyor', 'splitter', 'merger', 'filter', 'reactor']);
 const OpKindEnum = z.enum(['MOVE', 'GRAB', 'DROP', 'WAIT', 'SENSE']);
 
+const ReactorRecipe = z
+  .object({
+    inputs: z.array(z.string().min(1).max(40)).min(1).max(8),
+    output: z.string().min(1).max(40),
+  })
+  .strict();
+
 const PuzzleSchema = z
   .object({
     id: z.string().regex(/^[a-zA-Z0-9_-]{1,40}$/),
@@ -114,6 +121,18 @@ const PuzzleSchema = z
       })
       .strict(),
     optional_challenges: z.array(OptionalChallenge).max(8),
+    /**
+     * Pre-declared reactor recipes the editor offers when placing a
+     * reactor tile. Required (and non-empty) when `available_tiles`
+     * includes 'reactor' — checked in `parseCampaign` post-Zod.
+     */
+    reactor_recipes: z.array(ReactorRecipe).max(8).optional(),
+    /**
+     * Pre-declared filter types the editor offers when placing a
+     * filter tile. Required (and non-empty) when `available_tiles`
+     * includes 'filter' — checked in `parseCampaign` post-Zod.
+     */
+    filter_types: z.array(z.string().min(1).max(40)).max(8).optional(),
   })
   .strict();
 
@@ -176,6 +195,10 @@ export function parseCampaign(input: unknown): RawCampaign {
   // RuleParseError translates to a CampaignParseError so the loader
   // surface stays consistent.
   const ruleIssues: string[] = [];
+  // Plus: any puzzle that lists 'reactor' or 'filter' in available_tiles
+  // must declare a non-empty pre-configured list, since the editor reads
+  // the recipe/filterType off the puzzle when placing the tile.
+  const configIssues: string[] = [];
   for (let a = 0; a < result.data.acts.length; a++) {
     const act = result.data.acts[a]!;
     for (let p = 0; p < act.puzzles.length; p++) {
@@ -189,12 +212,33 @@ export function parseCampaign(input: unknown): RawCampaign {
           ruleIssues.push(`${path}: ${e instanceof RuleParseError ? e.message : String(e)}`);
         }
       }
+      const path = `acts[${a}].puzzles[${p}]`;
+      if (puzzle.available_tiles.includes('reactor')) {
+        if (!puzzle.reactor_recipes || puzzle.reactor_recipes.length === 0) {
+          configIssues.push(
+            `${path}: available_tiles includes 'reactor' but reactor_recipes is missing or empty`,
+          );
+        }
+      }
+      if (puzzle.available_tiles.includes('filter')) {
+        if (!puzzle.filter_types || puzzle.filter_types.length === 0) {
+          configIssues.push(
+            `${path}: available_tiles includes 'filter' but filter_types is missing or empty`,
+          );
+        }
+      }
     }
   }
   if (ruleIssues.length > 0) {
     throw new CampaignParseError(
       `${ruleIssues.length} optional challenge rule(s) failed DSL parse`,
       ruleIssues,
+    );
+  }
+  if (configIssues.length > 0) {
+    throw new CampaignParseError(
+      `${configIssues.length} puzzle configuration issue(s)`,
+      configIssues,
     );
   }
   return result.data;

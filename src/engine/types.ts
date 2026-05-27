@@ -129,6 +129,20 @@ export interface Puzzle {
   readonly constraints: PuzzleConstraints;
   /** Optional challenges; each has a rule DSL string evaluated post-victory. */
   readonly optionalChallenges: readonly OptionalChallenge[];
+  /**
+   * Reactor recipes the puzzle author has pre-declared. The editor uses
+   * these to populate the `recipe` field on placed reactor tiles — if a
+   * puzzle exposes exactly one recipe, placing a reactor uses it
+   * automatically; multiple recipes drive a picker UI. Required for any
+   * puzzle that lists 'reactor' in `availableTiles`; an empty list is
+   * a configuration error.
+   */
+  readonly reactorRecipes?: readonly ReactorRecipe[];
+  /**
+   * Filter types the puzzle author has pre-declared. Same role as
+   * `reactorRecipes` but for filter tiles.
+   */
+  readonly filterTypes?: readonly CargoType[];
 }
 
 // ─── Player solution ───────────────────────────────────────────────

@@ -68,6 +68,77 @@ describe('placing-tile mode', () => {
     s = reduce(s, { type: 'CLICK_CELL', pos: [1, 1] });
     expect(s.draft.tiles).toHaveLength(1);
     expect(s.draft.tiles[0]?.kind).toBe('filter');
+    // Default filter type from the puzzle is auto-applied:
+    expect(s.draft.tiles[0]?.filterType).toBe('alpha');
+  });
+
+  test('placed reactor carries the recipe declared by the puzzle', () => {
+    const puzzle = makePuzzle({
+      grid: { w: 4, h: 4 },
+      availableTiles: ['reactor'],
+      reactorRecipes: [{ inputs: ['alpha', 'beta'], output: 'gamma' }],
+    });
+    let s = initialEditorState(puzzle);
+    s = reduce(s, { type: 'SELECT_TILE_KIND', tileKind: 'reactor' });
+    s = reduce(s, { type: 'CLICK_CELL', pos: [1, 1] });
+    expect(s.draft.tiles).toHaveLength(1);
+    expect(s.draft.tiles[0]?.kind).toBe('reactor');
+    expect(s.draft.tiles[0]?.recipe).toEqual({ inputs: ['alpha', 'beta'], output: 'gamma' });
+  });
+
+  test('placed filter carries the filterType declared by the puzzle', () => {
+    const puzzle = makePuzzle({
+      grid: { w: 4, h: 4 },
+      availableTiles: ['filter'],
+      filterTypes: ['alpha'],
+    });
+    let s = initialEditorState(puzzle);
+    s = reduce(s, { type: 'SELECT_TILE_KIND', tileKind: 'filter' });
+    s = reduce(s, { type: 'CLICK_CELL', pos: [1, 1] });
+    expect(s.draft.tiles[0]?.kind).toBe('filter');
+    expect(s.draft.tiles[0]?.filterType).toBe('alpha');
+  });
+
+  test('SELECT_PLACEMENT_RECIPE switches the placement recipe within the allowed set', () => {
+    const r1 = { inputs: ['alpha', 'beta'], output: 'gamma' } as const;
+    const r2 = { inputs: ['alpha', 'alpha'], output: 'delta' } as const;
+    const puzzle = makePuzzle({
+      grid: { w: 4, h: 4 },
+      availableTiles: ['reactor'],
+      reactorRecipes: [r1, r2],
+    });
+    let s = initialEditorState(puzzle);
+    s = reduce(s, { type: 'SELECT_TILE_KIND', tileKind: 'reactor' });
+    s = reduce(s, { type: 'SELECT_PLACEMENT_RECIPE', recipe: r2 });
+    s = reduce(s, { type: 'CLICK_CELL', pos: [1, 1] });
+    expect(s.draft.tiles[0]?.recipe).toEqual(r2);
+  });
+
+  test('SELECT_PLACEMENT_RECIPE with a recipe not in the puzzle is rejected', () => {
+    const puzzle = makePuzzle({
+      grid: { w: 4, h: 4 },
+      availableTiles: ['reactor'],
+      reactorRecipes: [{ inputs: ['alpha', 'beta'], output: 'gamma' }],
+    });
+    let s = initialEditorState(puzzle);
+    s = reduce(s, { type: 'SELECT_TILE_KIND', tileKind: 'reactor' });
+    const forbidden = { inputs: ['delta', 'epsilon'], output: 'zeta' };
+    s = reduce(s, { type: 'SELECT_PLACEMENT_RECIPE', recipe: forbidden });
+    // Mode still has the original default.
+    expect((s.mode as { recipe?: { output: string } }).recipe?.output).toBe('gamma');
+  });
+
+  test('SELECT_PLACEMENT_FILTER_TYPE switches the filter type within the allowed set', () => {
+    const puzzle = makePuzzle({
+      grid: { w: 4, h: 4 },
+      availableTiles: ['filter'],
+      filterTypes: ['alpha', 'beta'],
+    });
+    let s = initialEditorState(puzzle);
+    s = reduce(s, { type: 'SELECT_TILE_KIND', tileKind: 'filter' });
+    s = reduce(s, { type: 'SELECT_PLACEMENT_FILTER_TYPE', filterType: 'beta' });
+    s = reduce(s, { type: 'CLICK_CELL', pos: [1, 1] });
+    expect(s.draft.tiles[0]?.filterType).toBe('beta');
   });
 
   test('CLICK_CELL on an obstacle is rejected', () => {

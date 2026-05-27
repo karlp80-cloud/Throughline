@@ -154,3 +154,68 @@ describe('parseCampaign: error shape', () => {
     }
   });
 });
+
+describe('parseCampaign: tile configuration coupling', () => {
+  test('puzzle listing reactor in available_tiles must declare reactor_recipes', () => {
+    const m = validManifest() as {
+      acts: {
+        puzzles: {
+          available_tiles: string[];
+          inputs: { emits: string[] }[];
+          outputs: { required: { type: string; count: number }[] }[];
+        }[];
+      }[];
+    };
+    m.acts[0]!.puzzles[0]!.available_tiles = ['conveyor', 'reactor'];
+    expect(() => parseCampaign(m)).toThrow(CampaignParseError);
+  });
+
+  test('puzzle listing filter in available_tiles must declare filter_types', () => {
+    const m = validManifest() as {
+      acts: {
+        puzzles: { available_tiles: string[] }[];
+      }[];
+    };
+    m.acts[0]!.puzzles[0]!.available_tiles = ['conveyor', 'filter'];
+    expect(() => parseCampaign(m)).toThrow(CampaignParseError);
+  });
+
+  test('reactor + non-empty recipes parses', () => {
+    const m = validManifest() as {
+      acts: {
+        puzzles: {
+          available_tiles: string[];
+          reactor_recipes?: { inputs: string[]; output: string }[];
+        }[];
+      }[];
+    };
+    m.acts[0]!.puzzles[0]!.available_tiles = ['conveyor', 'reactor'];
+    m.acts[0]!.puzzles[0]!.reactor_recipes = [{ inputs: ['alpha', 'beta'], output: 'gamma' }];
+    expect(() => parseCampaign(m)).not.toThrow();
+  });
+
+  test('filter + non-empty types parses', () => {
+    const m = validManifest() as {
+      acts: {
+        puzzles: { available_tiles: string[]; filter_types?: string[] }[];
+      }[];
+    };
+    m.acts[0]!.puzzles[0]!.available_tiles = ['conveyor', 'filter'];
+    m.acts[0]!.puzzles[0]!.filter_types = ['alpha'];
+    expect(() => parseCampaign(m)).not.toThrow();
+  });
+
+  test('empty recipe array is still rejected', () => {
+    const m = validManifest() as {
+      acts: {
+        puzzles: {
+          available_tiles: string[];
+          reactor_recipes?: unknown[];
+        }[];
+      }[];
+    };
+    m.acts[0]!.puzzles[0]!.available_tiles = ['conveyor', 'reactor'];
+    m.acts[0]!.puzzles[0]!.reactor_recipes = [];
+    expect(() => parseCampaign(m)).toThrow(CampaignParseError);
+  });
+});

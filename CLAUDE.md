@@ -17,9 +17,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Phase 9 added `campaigns/tutorial.json` — *The Apprentice's Manual*. Six hand-built puzzles teaching one mechanic each (conveyor → splitter → agent → filter → merger → reactor), with mentor lines in `briefing` using generic vocabulary that gels with any later procgen theme. `campaigns/tutorial.solutions.ts` carries reference solutions; a unit test asserts every reference wins, and `e2e/tutorial.spec.ts` walks the whole 6-puzzle act to the ending in ~9s. Curriculum doc at [docs/curriculum/tutorial.md](docs/curriculum/tutorial.md). Tutorial is the FIRST built-in on the main menu now.
 
-One Phase-9 polish gap: the editor's tile-placement UI doesn't surface a filter-type picker, so P4 ("The Sorter's Eye") currently requires LOAD_SOLUTION or a future UI extension to place a configured filter. The e2e bypasses via LOAD_SOLUTION.
+Filter/reactor placement now resolves the config from the puzzle. Each puzzle that lists `filter` or `reactor` in `available_tiles` must also declare `filter_types` / `reactor_recipes` (enforced post-Zod). The editor pre-fills the placement Mode with the first option and surfaces a picker row when multiple options exist; tutorial puzzles declare exactly one option each.
 
-**Tally:** 376 unit (+8 tutorial) + 15 e2e (+1 tutorial). Tsc + lint clean. CI green at each push.
+**Tally:** 388 unit (+10 placement-config) + 15 e2e. Tsc + lint clean. CI green at each push.
 
 **Pending:** Phase 9 human-playtester review — recruit 2-3 people who haven't seen Throughline, hand them `npm run dev`, file findings in `docs/playtest/tutorial-<initials>.md`. Patterns across testers (not single-tester noise) drive any mentor-copy or constraint iteration.
 

@@ -85,6 +85,7 @@
           "available_tiles": ["conveyor", "filter"],
           "available_ops": ["MOVE", "WAIT"],
           "constraints": { "max_tiles": 8, "max_cycles": 40 },
+          "filter_types": ["alpha"],
           "optional_challenges": [
             { "id": "opt_lean", "label": "Use ≤5 tiles", "rule": "tiles_used <= 5" }
           ]
@@ -121,6 +122,8 @@
           "available_tiles": ["conveyor", "splitter", "merger", "filter", "reactor"],
           "available_ops": ["MOVE", "GRAB", "DROP", "WAIT", "SENSE"],
           "constraints": { "max_tiles": 20, "max_cycles": 60 },
+          "reactor_recipes": [{ "inputs": ["alpha", "beta"], "output": "gamma" }],
+          "filter_types": ["alpha", "beta", "gamma"],
           "optional_challenges": [
             { "id": "opt_lean", "label": "Use ≤12 tiles", "rule": "tiles_used <= 12" }
           ]

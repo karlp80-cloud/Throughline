@@ -118,9 +118,18 @@ export interface PuzzleOverrides {
   availableOps?: readonly Op['kind'][];
   constraints?: Partial<PuzzleConstraints>;
   optionalChallenges?: readonly import('../types').OptionalChallenge[];
+  reactorRecipes?: readonly ReactorRecipe[];
+  filterTypes?: readonly CargoType[];
 }
 
 export function makePuzzle(o: PuzzleOverrides = {}): Puzzle {
+  const availableTiles = o.availableTiles ?? [
+    'conveyor',
+    'splitter',
+    'merger',
+    'filter',
+    'reactor',
+  ];
   return {
     id: o.id ?? 'test',
     grid: o.grid ?? { w: 8, h: 6 },
@@ -133,13 +142,25 @@ export function makePuzzle(o: PuzzleOverrides = {}): Puzzle {
         maxOps: a.maxOps ?? 16,
       })) ?? [],
     obstacles: o.obstacles ?? [],
-    availableTiles: o.availableTiles ?? ['conveyor', 'splitter', 'merger', 'filter', 'reactor'],
+    availableTiles,
     availableOps: o.availableOps ?? ['MOVE', 'GRAB', 'DROP', 'WAIT', 'SENSE'],
     constraints: {
       maxTiles: o.constraints?.maxTiles ?? 40,
       maxCycles: o.constraints?.maxCycles ?? 250,
     },
     optionalChallenges: o.optionalChallenges ?? [],
+    // Default these whenever the matching tile kind is available so the
+    // editor can place reactor/filter tiles in tests without manual setup.
+    ...(o.reactorRecipes
+      ? { reactorRecipes: o.reactorRecipes }
+      : availableTiles.includes('reactor')
+        ? { reactorRecipes: [{ inputs: ['alpha', 'beta'], output: 'gamma' }] }
+        : {}),
+    ...(o.filterTypes
+      ? { filterTypes: o.filterTypes }
+      : availableTiles.includes('filter')
+        ? { filterTypes: ['alpha'] }
+        : {}),
   };
 }
 
