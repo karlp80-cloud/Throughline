@@ -19,7 +19,13 @@ import { describe, expect, test } from 'vitest';
 const SRC_ROOT = join(process.cwd(), 'src');
 const ALLOWED_FILES = new Set<string>([join(SRC_ROOT, 'platform.ts')]);
 
-const STATIC_IMPORT_RE = /^\s*import\b[^;]*\bfrom\s+['"]@tauri-apps\//m;
+// Matches both forms:
+//   `import { x } from '@tauri-apps/api/core'`     — named/default
+//   `import '@tauri-apps/api/core'`                  — side-effect only
+// The `(.+\bfrom\s+)?` makes the `from` clause optional. Side-effect
+// imports were missed by the original `\bfrom\s+` requirement; Phase 11
+// reviewer Issue 3 broadened this.
+const STATIC_IMPORT_RE = /^\s*import\b(.+\bfrom\s+)?['"]@tauri-apps\//m;
 
 function* walkTs(dir: string): Generator<string> {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

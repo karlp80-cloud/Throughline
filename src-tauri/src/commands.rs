@@ -523,7 +523,14 @@ pub async fn read_campaign_file(
         .path()
         .app_data_dir()
         .map_err(|e| ProcgenError::new(ProcgenErrorKind::InternalError, e.to_string()))?;
-    let base_canon = base.canonicalize().unwrap_or(base);
+    // Make sure the base directory exists before canonicalizing so the
+    // resume-on-launch path doesn't get a Windows `\\?\` vs non-`\\?\`
+    // mismatch on a fresh profile (Phase 11 reviewer Issue 1).
+    std::fs::create_dir_all(&base)
+        .map_err(|e| ProcgenError::new(ProcgenErrorKind::FileReadFailed, e.to_string()))?;
+    let base_canon = base
+        .canonicalize()
+        .map_err(|e| ProcgenError::new(ProcgenErrorKind::FileReadFailed, e.to_string()))?;
     if !resolved.starts_with(&base_canon) {
         return Err(ProcgenError::new(
             ProcgenErrorKind::PathRejected,
@@ -533,4 +540,128 @@ pub async fn read_campaign_file(
     tokio::fs::read_to_string(&resolved)
         .await
         .map_err(|e| ProcgenError::new(ProcgenErrorKind::FileReadFailed, e.to_string()))
+}
+
+// ─── Unit tests ──────────────────────────────────────────────────
+// Phase 11 reviewer Issue 2: architect §11.5 listed these two tests
+// (`argv_construction` and `timeout_kills_child`). Adding them now so
+// both code paths are exercised directly, not just transitively.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn argv_construction_pushes_flags_in_expected_order() {
+        let bin = PathBuf::from("/throughline/bin/throughline-gen");
+        let opts = GenerateOpts {
+            job_id: "job-1".into(),
+            seed: Some("abc".into()),
+            acts: Some(3),
+            puzzles_per_act: Some(4),
+            gentle: Some(true),
+            avoid_themes: Some(vec!["alpha".into(), "beta".into()]),
+            llm_timeout_ms: Some(45_000),
+        };
+        let argv = build_argv(&bin, "manifest.json", &opts);
+        assert_eq!(
+            argv,
+            vec![
+                bin.to_string_lossy().into_owned(),
+                "--out".to_string(),
+                "manifest.json".to_string(),
+                "--seed".to_string(),
+                "abc".to_string(),
+                "--acts".to_string(),
+                "3".to_string(),
+                "--puzzles-per-act".to_string(),
+                "4".to_string(),
+                "--gentle".to_string(),
+                "--avoid-themes".to_string(),
+                "alpha,beta".to_string(),
+                "--llm-timeout-ms".to_string(),
+                "45000".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn argv_construction_omits_unset_flags() {
+        let bin = PathBuf::from("/bin/throughline-gen");
+        let opts = GenerateOpts {
+            job_id: "job-2".into(),
+            seed: None,
+            acts: None,
+            puzzles_per_act: None,
+            gentle: None,
+            avoid_themes: None,
+            llm_timeout_ms: None,
+        };
+        let argv = build_argv(&bin, "out.json", &opts);
+        // Only the bin path + the always-set --out remain.
+        assert_eq!(
+            argv,
+            vec![
+                bin.to_string_lossy().into_owned(),
+                "--out".to_string(),
+                "out.json".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn argv_construction_skips_empty_avoid_themes() {
+        let bin = PathBuf::from("/bin/throughline-gen");
+        let opts = GenerateOpts {
+            job_id: "j".into(),
+            seed: None,
+            acts: None,
+            puzzles_per_act: None,
+            gentle: Some(false), // also confirm false omits the flag
+            avoid_themes: Some(vec![]),
+            llm_timeout_ms: None,
+        };
+        let argv = build_argv(&bin, "o.json", &opts);
+        // --avoid-themes must not appear when the list is empty.
+        assert!(!argv.iter().any(|a| a == "--avoid-themes"));
+        // --gentle must not appear when false.
+        assert!(!argv.iter().any(|a| a == "--gentle"));
+    }
+
+    /// Spawn a Node subprocess that won't exit on its own; race it
+    /// against a tight tokio timeout and confirm the timeout branch
+    /// fires and the child is killable. Requires `node` on PATH —
+    /// the same runtime dependency Q9 documented for the desktop app.
+    #[tokio::test]
+    async fn timeout_kills_child() {
+        // 30 s child + 500 ms budget: well-separated so a slow CI
+        // box doesn't race the budget.
+        let mut cmd = Command::new("node");
+        cmd.args(["-e", "setTimeout(() => process.exit(0), 30000)"]);
+        cmd.stdin(Stdio::null());
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
+        cmd.kill_on_drop(true);
+        let Ok(mut child) = cmd.spawn() else {
+            // node not installed in the CI shell — skip with a clear
+            // log line. This is a Phase 11 runtime requirement so a
+            // missing node here would be a setup bug, not a code bug.
+            eprintln!("timeout_kills_child: skipped (node not on PATH)");
+            return;
+        };
+        let wait_fut = child.wait();
+        let result = tokio::time::timeout(Duration::from_millis(500), wait_fut).await;
+        match result {
+            Err(_elapsed) => {
+                // Budget fired before the child exited. Confirm we can
+                // kill it cleanly.
+                child.start_kill().expect("start_kill should succeed");
+                // Drain so the kill_on_drop doesn't fire-and-forget.
+                let _ = child.wait().await;
+            }
+            Ok(_) => {
+                panic!("child exited within 500ms; test setup broken");
+            }
+        }
+    }
 }

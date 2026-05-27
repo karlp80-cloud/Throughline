@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phases 0–11 complete; Phase 11 awaiting reviewer.** Origin: https://github.com/karlp80-cloud/Throughline.
+**Phases 0–11 complete; Phase 11 reviewer-approved.** Origin: https://github.com/karlp80-cloud/Throughline.
 
 Phase 11 added the Tauri desktop scaffold + procgen flow that ties the Phase 10 CLI to the game. The wiring is:
 
@@ -34,13 +34,19 @@ The Rust→Node→`claude` chain inherits the user's privileges; `claude` is the
 
 **Tauri requirement note:** the desktop build requires the Rust toolchain (`rustup`) and Tauri 2.x system prerequisites (MSVC build tools + WebView2 on Win10+). Browser build (`npm run dev`, `npm run build`) has zero Rust dependency.
 
-**Tally:** 574 unit (+62 from Phase 11) + 21 e2e (+6 procgen). Tsc + lint clean. 1 unit test skipped on Windows (symlink test — symlink creation needs admin). Cargo: 9 Rust tests pass (`cargo test --manifest-path src-tauri/Cargo.toml`). Live-LLM integration test gated by `RUN_LIVE_LLM=1`, never runs in CI.
+**Tally:** 574 unit (+62 from Phase 11) + 21 e2e (+6 procgen). Tsc + lint clean. 1 unit test skipped on Windows (symlink test — symlink creation needs admin). Cargo: 13 Rust tests pass (+4 from reviewer follow-up: 3× argv construction + 1× timeout_kills_child). Live-LLM integration test gated by `RUN_LIVE_LLM=1`, never runs in CI.
 
 Phase 10 reviewer verdict: **PASS-WITH-NOTES**; full report in [docs/reviews/phase-10.md](docs/reviews/phase-10.md).
+Phase 11 reviewer verdict: **PASS-WITH-NOTES**; full report in [docs/reviews/phase-11.md](docs/reviews/phase-11.md). Three low-severity items addressed in wrap-up commit:
+- `commands.rs` `read_campaign_file` now creates the app-data dir before canonicalizing (fixes a first-run Windows UNC-prefix edge case).
+- `commands.rs` adds 4 new `#[cfg(test)]` tests: 3× argv-construction + 1× timeout_kills_child. Rust suite now 13 tests.
+- `no-tauri-static-import.test.ts` regex broadened to also catch side-effect imports (`import '@tauri-apps/...'`).
+
+Phase 12 inherits one carryover: validate `tauri.conf.json#bundle.resources` against an actual `tauri build` (Phase 11 verified `cargo build`; bundling step deferred).
 
 Phase 9 playtest closed (single-tester pass, log at [docs/playtest/tutorial-karlp.md](docs/playtest/tutorial-karlp.md)).
 
-**Pending:** Phase 11 reviewer pass + the manual checkpoint — hit `npm run tauri dev` on a clean profile, play through one generated campaign 30+ minutes, file findings in `docs/playtest/procgen-first-pass.md`.
+**Pending:** Phase 11 manual checkpoint — hit `npm run tauri dev` on a clean profile, play through one generated campaign 30+ minutes, file findings in `docs/playtest/procgen-first-pass.md`.
 
 **Next:** Phase 12 — Packaging.
 
