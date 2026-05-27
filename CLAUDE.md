@@ -13,13 +13,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current phase
 
-**Phases 0–8 complete.** Origin: https://github.com/karlp80-cloud/Throughline.
+**Phases 0–9 complete; Phase 9 awaiting human playtester review.** Origin: https://github.com/karlp80-cloud/Throughline.
 
-Phase 8 added `src/theme/` (palette injection + WCAG AA contrast floor + glyph variant resolution + `{{token}}` vocab substitution with HTML escape + audio progression routing) and 4 glyph families (default + alchemy + forensics + scifi, 33 variants). Moderate cycle: architect memo at [docs/architecture/theming.md](docs/architecture/theming.md), TDD coder, fresh-context reviewer subagent signed off all seven checklist items (token-leak sweep verified by canary, contrast fallback to `DEFAULT_PALETTE` on AA failure, HTML escape blocks `<script>` injection, no `innerHTML` in theme/glyphs source, glyph path-data is ASCII-only SVG, palette injection uses CSS API not string concat, `families.json` matches `library.ts`). Built-in demo at `campaigns/alchemy-demo.json` exercises the full pipeline.
+Phase 9 added `campaigns/tutorial.json` — *The Apprentice's Manual*. Six hand-built puzzles teaching one mechanic each (conveyor → splitter → agent → filter → merger → reactor), with mentor lines in `briefing` using generic vocabulary that gels with any later procgen theme. `campaigns/tutorial.solutions.ts` carries reference solutions; a unit test asserts every reference wins, and `e2e/tutorial.spec.ts` walks the whole 6-puzzle act to the ending in ~9s. Curriculum doc at [docs/curriculum/tutorial.md](docs/curriculum/tutorial.md). Tutorial is the FIRST built-in on the main menu now.
 
-**Tally:** 368 unit (135 engine + 5 palette + 35 editor + 22 animator + 71 DSL + 9 detector + 10 audio + 46 campaign + 34 theme + 1 smoke) + 14 e2e (smoke + 4 renderer screenshots + 1 editor + 2 playback + 1 completion + 1 campaign + 4 theme). Tsc + lint clean. CI green at each push.
+One Phase-9 polish gap: the editor's tile-placement UI doesn't surface a filter-type picker, so P4 ("The Sorter's Eye") currently requires LOAD_SOLUTION or a future UI extension to place a configured filter. The e2e bypasses via LOAD_SOLUTION.
 
-**Next:** Phase 9 — Hardcoded Tutorial Campaign (*The Apprentice's Manual*). **Content-focused cycle** — 6 puzzles, one mechanic per puzzle, generic vocabulary (no themed words) so the tutorial gels with any later procgen theme. Reviewer is 2-3 playtesters, not a code reviewer.
+**Tally:** 376 unit (+8 tutorial) + 15 e2e (+1 tutorial). Tsc + lint clean. CI green at each push.
+
+**Pending:** Phase 9 human-playtester review — recruit 2-3 people who haven't seen Throughline, hand them `npm run dev`, file findings in `docs/playtest/tutorial-<initials>.md`. Patterns across testers (not single-tester noise) drive any mentor-copy or constraint iteration.
+
+**Next:** Phase 10 — Companion CLI (`throughline-gen`). **Full cycle**. The last big review-heavy phase. Security-relevant: subprocess to `claude -p`, Zod validation of LLM output, retry loop with bounded backoff, automated solvability check. The plan calls it "the most important review pass in the project."
 
 When a phase completes, update this section to point at the next phase.
 
