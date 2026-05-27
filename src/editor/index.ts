@@ -61,10 +61,15 @@ export function mountEditor(container: HTMLElement, puzzle: Puzzle): EditorHandl
 
   const palette = mountPalette(paletteEl, () => state, dispatch);
   const opList = mountOpList(opListEl, () => state, dispatch);
-  const detachInput = attachCanvasInput(canvas, () => state, dispatch, (cell) => {
-    hoverCell = cell;
-    rerenderCanvas();
-  });
+  const detachInput = attachCanvasInput(
+    canvas,
+    () => state,
+    dispatch,
+    (cell) => {
+      hoverCell = cell;
+      rerenderCanvas();
+    },
+  );
 
   function dispatch(action: EditorAction): void {
     state = reduce(state, action);

@@ -343,5 +343,12 @@ function drawPreviewTile(
   // still visible.
   if (solution.tiles.some((t) => t.pos[0] === pos[0] && t.pos[1] === pos[1])) return;
 
-  drawGlyphAt(ctx, tileKindToGlyph(preview.tileKind), pos, paletteColor('fg'), preview.facing, 0.35);
+  drawGlyphAt(
+    ctx,
+    tileKindToGlyph(preview.tileKind),
+    pos,
+    paletteColor('fg'),
+    preview.facing,
+    0.35,
+  );
 }
