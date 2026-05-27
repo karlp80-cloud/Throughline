@@ -10,15 +10,16 @@
  */
 
 import type {
-  AgentState,
   CargoInstance,
   Direction,
   PlacedTile,
   Pos,
+  PosKey,
   Puzzle,
   Solution,
   WorldState,
 } from '../engine/types';
+import { fromPosKey } from '../engine/types';
 import { GLYPHS, type GlyphKey } from './glyphs';
 import { paletteColor } from './palette';
 
@@ -224,14 +225,84 @@ function drawPaths(
   ctx.restore();
 }
 
-function drawCargo(ctx: CanvasRenderingContext2D, world: WorldState, puzzle: Puzzle): void {
-  for (let y = 0; y < puzzle.grid.h; y++) {
-    for (let x = 0; x < puzzle.grid.w; x++) {
-      const here = world.cargoOnTiles[`${x},${y}`];
-      if (!here || here.length === 0) continue;
-      drawCargoCluster(ctx, [x, y], here);
+function drawCargo(
+  ctx: CanvasRenderingContext2D,
+  world: WorldState,
+  puzzle: Puzzle,
+  nextWorld?: WorldState,
+  alpha?: number,
+): void {
+  // No interpolation requested → discrete render.
+  if (!nextWorld || !alpha || alpha <= 0) {
+    for (let y = 0; y < puzzle.grid.h; y++) {
+      for (let x = 0; x < puzzle.grid.w; x++) {
+        const here = world.cargoOnTiles[`${x},${y}`];
+        if (!here || here.length === 0) continue;
+        drawCargoCluster(ctx, [x, y], here);
+      }
+    }
+    return;
+  }
+  drawCargoInterpolated(ctx, world, nextWorld, alpha);
+}
+
+function indexCargoById(
+  cargoOnTiles: Readonly<Record<PosKey, readonly CargoInstance[]>>,
+): Map<number, { cargo: CargoInstance; pos: Pos }> {
+  const out = new Map<number, { cargo: CargoInstance; pos: Pos }>();
+  for (const [key, list] of Object.entries(cargoOnTiles)) {
+    const pos = fromPosKey(key as PosKey);
+    for (const c of list) out.set(c.id, { cargo: c, pos });
+  }
+  return out;
+}
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+function drawCargoInterpolated(
+  ctx: CanvasRenderingContext2D,
+  world: WorldState,
+  nextWorld: WorldState,
+  alpha: number,
+): void {
+  const fromBy = indexCargoById(world.cargoOnTiles);
+  const toBy = indexCargoById(nextWorld.cargoOnTiles);
+
+  // Cargo present in `world` — either lerping to its `nextWorld` position
+  // or fading out if it disappears (delivered / consumed by a reactor).
+  for (const [id, { cargo, pos: fromPos }] of fromBy) {
+    const to = toBy.get(id);
+    if (to) {
+      const gx = lerp(fromPos[0], to.pos[0], alpha);
+      const gy = lerp(fromPos[1], to.pos[1], alpha);
+      paintCargoAtCellFraction(ctx, gx, gy, cargo, 1);
+    } else {
+      paintCargoAtCellFraction(ctx, fromPos[0], fromPos[1], cargo, 1 - alpha);
     }
   }
+  // Cargo NEW in `nextWorld` (emitted this cycle, produced by a reactor):
+  // fade in at its destination.
+  for (const [id, { cargo, pos }] of toBy) {
+    if (fromBy.has(id)) continue;
+    paintCargoAtCellFraction(ctx, pos[0], pos[1], cargo, alpha);
+  }
+}
+
+function paintCargoAtCellFraction(
+  ctx: CanvasRenderingContext2D,
+  gx: number,
+  gy: number,
+  cargo: CargoInstance,
+  opacity: number,
+): void {
+  const cx = gx * CELL_SIZE + CELL_SIZE / 2;
+  const cy = gy * CELL_SIZE + CELL_SIZE / 2;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  paintCargoDot(ctx, cx, cy, cargo);
+  ctx.restore();
 }
 
 function drawCargoCluster(
@@ -273,30 +344,63 @@ function paintCargoDot(
   ctx.stroke();
 }
 
-function drawAgents(ctx: CanvasRenderingContext2D, world: WorldState): void {
+function drawAgents(
+  ctx: CanvasRenderingContext2D,
+  world: WorldState,
+  nextWorld?: WorldState,
+  alpha?: number,
+): void {
   ensureGlyphPaths();
-  // Iterate deterministically.
   const ids = Object.keys(world.agents).sort();
+  const useLerp = nextWorld !== undefined && alpha !== undefined && alpha > 0;
   for (const id of ids) {
     const agent = world.agents[id];
     if (!agent) continue;
-    drawAgent(ctx, agent);
+    const nextAgent = useLerp ? nextWorld.agents[id] : undefined;
+    if (useLerp && nextAgent) {
+      const gx = lerp(agent.pos[0], nextAgent.pos[0], alpha);
+      const gy = lerp(agent.pos[1], nextAgent.pos[1], alpha);
+      drawAgentAt(ctx, gx, gy, agent.carrying ?? nextAgent.carrying ?? null);
+    } else {
+      drawAgentAt(ctx, agent.pos[0], agent.pos[1], agent.carrying);
+    }
   }
 }
 
-function drawAgent(ctx: CanvasRenderingContext2D, agent: AgentState): void {
-  const { x, y } = cellOrigin(agent.pos);
-  // Halo if carrying something
-  if (agent.carrying !== null) {
+function drawAgentAt(
+  ctx: CanvasRenderingContext2D,
+  gx: number,
+  gy: number,
+  carrying: CargoInstance | null,
+): void {
+  const x = gx * CELL_SIZE;
+  const y = gy * CELL_SIZE;
+  // Halo if carrying
+  if (carrying !== null) {
     ctx.fillStyle = paletteColor('accent');
     ctx.beginPath();
-    ctx.arc(snap(x + CELL_SIZE / 2), snap(y + CELL_SIZE / 2), 22, 0, Math.PI * 2);
+    ctx.arc(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 22, 0, Math.PI * 2);
     ctx.fill();
   }
-  drawGlyphAt(ctx, 'agent', agent.pos, paletteColor('fg'));
-  // If carrying, draw a small cargo dot on the agent's center.
-  if (agent.carrying !== null) {
-    paintCargoDot(ctx, x + CELL_SIZE / 2, y + CELL_SIZE / 2, agent.carrying);
+  // Agent glyph — we draw at the lerped position via a save/translate
+  // because drawGlyphAt expects an integer cell origin.
+  ctx.save();
+  ctx.translate(x, y);
+  ensureGlyphPaths();
+  const path = glyphPaths!.get('agent');
+  if (path) {
+    ctx.scale(CELL_SIZE / 100, CELL_SIZE / 100);
+    ctx.fillStyle = paletteColor('fg');
+    ctx.strokeStyle = paletteColor('fg');
+    ctx.lineWidth = 5;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.fill(path);
+    ctx.stroke(path);
+  }
+  ctx.restore();
+  if (carrying !== null) {
+    paintCargoDot(ctx, x + CELL_SIZE / 2, y + CELL_SIZE / 2, carrying);
   }
 }
 
@@ -311,6 +415,14 @@ export interface RenderOptions {
     readonly tileKind: PlacedTile['kind'];
     readonly facing: Direction;
   };
+  /**
+   * Inter-cycle interpolation: world being interpolated TOWARD plus a
+   * progress [0,1]. When set, cargo and agents are drawn at lerped
+   * positions between `world` and `nextWorld`. Without these the
+   * draws are discrete (cargo and agents snap to cell centers).
+   */
+  readonly nextWorld?: WorldState;
+  readonly alpha?: number;
 }
 
 export function render(
@@ -326,8 +438,8 @@ export function render(
   drawInputsAndOutputs(ctx, puzzle);
   drawTiles(ctx, solution.tiles);
   if (opts.showPaths !== false) drawPaths(ctx, solution.paths);
-  drawCargo(ctx, world, puzzle);
-  drawAgents(ctx, world);
+  drawCargo(ctx, world, puzzle, opts.nextWorld, opts.alpha);
+  drawAgents(ctx, world, opts.nextWorld, opts.alpha);
   if (opts.preview) drawPreviewTile(ctx, opts.preview, puzzle, solution);
 }
 

@@ -50,7 +50,12 @@ export function mountPlayback(
   if (!ctx) throw new Error('Canvas 2D context unavailable');
 
   function paint(): void {
-    render(ctx!, animator.currentWorld(), puzzle, solution, { showPaths: true });
+    const next = animator.nextWorld();
+    const a = animator.alpha();
+    render(ctx!, animator.currentWorld(), puzzle, solution, {
+      showPaths: true,
+      ...(next !== null ? { nextWorld: next, alpha: a } : {}),
+    });
   }
   paint();
 
@@ -61,30 +66,21 @@ export function mountPlayback(
   animator.play();
 
   // RAF driver. Ticks the animator with the wall-clock delta and
-  // only repaints if the displayed frame changed.
+  // repaints every frame so cargo/agents lerp visibly between cycles.
   let rafId = 0;
   let lastTs = 0;
-  let lastFrame = animator.frame();
   function loop(ts: number): void {
     const dt = lastTs === 0 ? 0 : ts - lastTs;
     lastTs = ts;
     animator.tick(dt);
-    if (animator.frame() !== lastFrame) {
-      paint();
-      lastFrame = animator.frame();
-    }
+    paint();
     rafId = requestAnimationFrame(loop);
   }
   rafId = requestAnimationFrame(loop);
 
-  // Repaint on any animator update that's NOT from tick (manual step,
-  // reset, etc.) — the RAF loop only repaints on tick advances.
-  const offUpdate = animator.onUpdate(() => {
-    if (animator.frame() !== lastFrame) {
-      paint();
-      lastFrame = animator.frame();
-    }
-  });
+  // Repaint immediately on any animator update from a non-tick source
+  // (manual step, reset, etc.).
+  const offUpdate = animator.onUpdate(paint);
 
   return {
     animator: () => animator,

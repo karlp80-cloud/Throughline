@@ -31,8 +31,13 @@ export interface AnimatorOptions {
 
 export interface Animator {
   status(): AnimatorStatus;
+  /** Index of the "from" frame for interpolation. -1 = initialWorld. */
   frame(): number;
   currentWorld(): WorldState;
+  /** World we're interpolating TO; null when there's no next frame. */
+  nextWorld(): WorldState | null;
+  /** Progress [0,1] from currentWorld → nextWorld within this cycle. */
+  alpha(): number;
   haltStatus(): EngineStatus;
   speed(): Speed;
   play(): void;
@@ -75,10 +80,24 @@ export function createAnimator(opts: AnimatorOptions): Animator {
     return true;
   }
 
+  function nextWorld(): WorldState | null {
+    const next = frame + 1;
+    if (next < 0 || next >= opts.trace.length) return null;
+    const t = opts.trace[next];
+    return t ? t.worldAfter : null;
+  }
+
   return {
     status: () => status,
     frame: () => frame,
     currentWorld: world,
+    nextWorld,
+    alpha: () => {
+      if (status === 'finished') return 0;
+      const dur = cycleDurationMs(speed);
+      const a = accumMs / dur;
+      return a < 0 ? 0 : a > 1 ? 1 : a;
+    },
     haltStatus: () => opts.haltStatus,
     speed: () => speed,
 
