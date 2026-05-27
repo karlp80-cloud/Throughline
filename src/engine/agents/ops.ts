@@ -12,15 +12,7 @@
  * so the trace shows what actually ran, not the SENSE wrapper.
  */
 
-import type {
-  AgentId,
-  AgentIntent,
-  AgentState,
-  CargoInstance,
-  Op,
-  Pos,
-  ThenOp,
-} from '../types';
+import type { AgentId, AgentIntent, AgentState, CargoInstance, Op, Pos, ThenOp } from '../types';
 
 /**
  * Compute the agent's intent for the current cycle.

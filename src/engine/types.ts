@@ -126,8 +126,8 @@ export interface Solution {
 // ─── Runtime state ─────────────────────────────────────────────────
 export interface AgentState {
   readonly pos: Pos;
-  readonly pathIndex: number;     // wraps mod path.length
-  readonly programIndex: number;  // wraps mod program.length
+  readonly pathIndex: number; // wraps mod path.length
+  readonly programIndex: number; // wraps mod program.length
   readonly carrying: CargoInstance | null;
 }
 

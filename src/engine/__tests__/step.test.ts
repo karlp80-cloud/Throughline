@@ -21,9 +21,7 @@ describe('emission', () => {
       inputs: [{ pos: [0, 0], emits: ['alpha'], rate: 1 }],
     });
     const { world, trace } = stepOnce(puzzle, makeSolution(), makeWorld());
-    expect(trace.emissions).toEqual([
-      { inputPos: [0, 0], cargo: { id: 0, type: 'alpha' } },
-    ]);
+    expect(trace.emissions).toEqual([{ inputPos: [0, 0], cargo: { id: 0, type: 'alpha' } }]);
     expect(world.cargoOnTiles[posKey([0, 0])]).toEqual([{ id: 0, type: 'alpha' }]);
     expect(world.cumulativeEmissions).toBe(1);
     expect(world.nextCargoId).toBe(1);
@@ -97,7 +95,12 @@ describe('agent movement', () => {
     });
     const solution = makeSolution(
       [],
-      { a1: [[0, 0], [1, 0]] },
+      {
+        a1: [
+          [0, 0],
+          [1, 0],
+        ],
+      },
       { a1: [{ kind: 'MOVE' }] },
     );
     const world = makeWorld({ agents: { a1: agentState([0, 0]) } });
@@ -117,8 +120,14 @@ describe('agent movement', () => {
     const solution = makeSolution(
       [],
       {
-        a: [[0, 0], [1, 0]],
-        b: [[1, 0], [0, 0]],
+        a: [
+          [0, 0],
+          [1, 0],
+        ],
+        b: [
+          [1, 0],
+          [0, 0],
+        ],
       },
       {
         a: [{ kind: 'MOVE' }],
@@ -148,8 +157,14 @@ describe('agent movement', () => {
     const solution = makeSolution(
       [],
       {
-        a: [[0, 0], [1, 0]],
-        b: [[2, 0], [1, 0]],
+        a: [
+          [0, 0],
+          [1, 0],
+        ],
+        b: [
+          [2, 0],
+          [1, 0],
+        ],
       },
       {
         a: [{ kind: 'MOVE' }],
@@ -176,12 +191,64 @@ describe('agent movement', () => {
     });
     const solution = makeSolution(
       [],
-      { a: [[0, 0], [1, 0]] },
+      {
+        a: [
+          [0, 0],
+          [1, 0],
+        ],
+      },
       { a: [{ kind: 'MOVE' }] },
     );
     const world = makeWorld({ agents: { a: agentState([0, 0]) } });
     const { world: w2 } = stepOnce(puzzle, solution, world);
     expect(w2.agents['a']?.pos).toEqual([0, 0]);
+  });
+
+  test('three-way race for one cell: lex-earliest wins; other two blocked', () => {
+    const puzzle = makePuzzle({
+      grid: { w: 3, h: 3 },
+      agents: [
+        { id: 'a', startPos: [0, 1] },
+        { id: 'b', startPos: [1, 0] },
+        { id: 'c', startPos: [2, 1] },
+      ],
+    });
+    const solution = makeSolution(
+      [],
+      {
+        a: [
+          [0, 1],
+          [1, 1],
+        ],
+        b: [
+          [1, 0],
+          [1, 1],
+        ],
+        c: [
+          [2, 1],
+          [1, 1],
+        ],
+      },
+      {
+        a: [{ kind: 'MOVE' }],
+        b: [{ kind: 'MOVE' }],
+        c: [{ kind: 'MOVE' }],
+      },
+    );
+    const world = makeWorld({
+      agents: {
+        a: agentState([0, 1]),
+        b: agentState([1, 0]),
+        c: agentState([2, 1]),
+      },
+    });
+    const { world: w2, trace } = stepOnce(puzzle, solution, world);
+    expect(w2.agents['a']?.pos).toEqual([1, 1]); // 'a' < 'b' < 'c' → 'a' wins
+    expect(w2.agents['b']?.pos).toEqual([1, 0]);
+    expect(w2.agents['c']?.pos).toEqual([2, 1]);
+    const coll = trace.collisions.find((cl) => cl.pos[0] === 1 && cl.pos[1] === 1);
+    expect(coll?.winner).toBe('a');
+    expect(coll?.blocked.slice().sort()).toEqual(['b', 'c']);
   });
 
   test('agent moving off the grid is blocked', () => {
@@ -191,7 +258,12 @@ describe('agent movement', () => {
     });
     const solution = makeSolution(
       [],
-      { a: [[1, 0], [2, 0]] },
+      {
+        a: [
+          [1, 0],
+          [2, 0],
+        ],
+      },
       { a: [{ kind: 'MOVE' }] },
     );
     const world = makeWorld({ agents: { a: agentState([1, 0]) } });
@@ -241,9 +313,7 @@ describe('tile transport', () => {
 describe('reactor', () => {
   test('consumes inputs and produces output at-cell with fresh id', () => {
     const puzzle = makePuzzle({ grid: { w: 3, h: 1 } });
-    const solution = makeSolution([
-      reactor([1, 0], 'E', { inputs: ['a', 'b'], output: 'c' }),
-    ]);
+    const solution = makeSolution([reactor([1, 0], 'E', { inputs: ['a', 'b'], output: 'c' })]);
     const world = makeWorld({
       cargo: cargoMap({ '1,0': [cargo(0, 'a'), cargo(1, 'b')] }),
       nextCargoId: 2,
@@ -271,9 +341,7 @@ describe('delivery', () => {
     const { world: w2, trace } = stepOnce(puzzle, solution, world);
     expect(w2.cargoOnTiles[posKey([1, 0])] ?? []).toEqual([]);
     expect(w2.deliveredCounts['alpha']).toBe(1);
-    expect(trace.deliveries).toEqual([
-      { outputPos: [1, 0], cargo: { id: 0, type: 'alpha' } },
-    ]);
+    expect(trace.deliveries).toEqual([{ outputPos: [1, 0], cargo: { id: 0, type: 'alpha' } }]);
   });
 
   test('cargo of non-required type stays on the output cell (Q2a)', () => {
@@ -326,8 +394,14 @@ describe('cargo conservation per cycle', () => {
       world = r.world;
       const onTiles = Object.values(world.cargoOnTiles).flat().length;
       const carried = Object.values(world.agents).filter(
-        (a): a is { pos: [number, number]; pathIndex: number; programIndex: number; carrying: CargoInstance } =>
-          a.carrying !== null,
+        (
+          a,
+        ): a is {
+          pos: [number, number];
+          pathIndex: number;
+          programIndex: number;
+          carrying: CargoInstance;
+        } => a.carrying !== null,
       ).length;
       const delivered = Object.values(world.deliveredCounts).reduce((s, n) => s + n, 0);
       const net =

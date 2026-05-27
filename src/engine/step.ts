@@ -183,7 +183,7 @@ export function stepOnce(
     let newPos: Pos = startState.pos;
     let newPathIndex = startState.pathIndex;
     let newCarrying = startState.carrying;
-    let logFrom: Pos = startState.pos;
+    const logFrom: Pos = startState.pos;
     let logTo: Pos = startState.pos;
 
     if (intent.kind === 'move') {
@@ -286,11 +286,7 @@ export function stepOnce(
 }
 
 // ─── Tile intent application ───────────────────────────────────────
-function applyTileIntents(
-  draft: DraftWorld,
-  intents: readonly TileIntent[],
-  puzzle: Puzzle,
-): void {
+function applyTileIntents(draft: DraftWorld, intents: readonly TileIntent[], puzzle: Puzzle): void {
   // Order: consumeCargo → produceCargo → moveCargo → flipSplitter.
   // Each cell has at most one tile (Phase 3 editor enforces) so intents
   // from different tiles don't conflict on the same cargo.

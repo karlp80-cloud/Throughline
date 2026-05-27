@@ -1,0 +1,1354 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`snapshot scenarios > S1: conveyor line — input → 2 conveyors → output 1`] = `
+{
+  "status": "victory",
+  "trace": [
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 0,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 0,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 0,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 1,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 1,
+        "deliveredCounts": {},
+        "nextCargoId": 1,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 1,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 1,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 1,
+              "type": "alpha",
+            },
+          ],
+          "2,0": [
+            {
+              "id": 0,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 2,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 2,
+        "deliveredCounts": {},
+        "nextCargoId": 2,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 2,
+      "deliveries": [
+        {
+          "cargo": {
+            "id": 0,
+            "type": "alpha",
+          },
+          "outputPos": [
+            3,
+            0,
+          ],
+        },
+      ],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 2,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 2,
+              "type": "alpha",
+            },
+          ],
+          "2,0": [
+            {
+              "id": 1,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 3,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 3,
+        "deliveredCounts": {
+          "alpha": 1,
+        },
+        "nextCargoId": 3,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 3,
+      "deliveries": [
+        {
+          "cargo": {
+            "id": 1,
+            "type": "alpha",
+          },
+          "outputPos": [
+            3,
+            0,
+          ],
+        },
+      ],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 3,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 3,
+              "type": "alpha",
+            },
+          ],
+          "2,0": [
+            {
+              "id": 2,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 4,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 4,
+        "deliveredCounts": {
+          "alpha": 2,
+        },
+        "nextCargoId": 4,
+        "tileState": {},
+      },
+    },
+  ],
+  "traceLen": 4,
+}
+`;
+
+exports[`snapshot scenarios > S2: splitter feeds two outputs 1`] = `
+{
+  "status": "victory",
+  "trace": [
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 0,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 0,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            1,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,1": [
+            {
+              "id": 0,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 1,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 1,
+        "deliveredCounts": {},
+        "nextCargoId": 1,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 1,
+      "deliveries": [
+        {
+          "cargo": {
+            "id": 0,
+            "type": "alpha",
+          },
+          "outputPos": [
+            1,
+            0,
+          ],
+        },
+      ],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 1,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            1,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,1": [
+            {
+              "id": 1,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 2,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 2,
+        "deliveredCounts": {
+          "alpha": 1,
+        },
+        "nextCargoId": 2,
+        "tileState": {
+          "1,1": {
+            "splitterNextOut": "S",
+          },
+        },
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 2,
+      "deliveries": [
+        {
+          "cargo": {
+            "id": 1,
+            "type": "alpha",
+          },
+          "outputPos": [
+            1,
+            2,
+          ],
+        },
+      ],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 2,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            1,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,1": [
+            {
+              "id": 2,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 3,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 3,
+        "deliveredCounts": {
+          "alpha": 2,
+        },
+        "nextCargoId": 3,
+        "tileState": {
+          "1,1": {
+            "splitterNextOut": "N",
+          },
+        },
+      },
+    },
+  ],
+  "traceLen": 3,
+}
+`;
+
+exports[`snapshot scenarios > S3: filter passes alphas only; betas pile up at filter cell 1`] = `
+{
+  "status": "victory",
+  "trace": [
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 0,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 0,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 0,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 1,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 1,
+        "deliveredCounts": {},
+        "nextCargoId": 1,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 1,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 1,
+            "type": "beta",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 1,
+              "type": "beta",
+            },
+          ],
+          "2,0": [
+            {
+              "id": 0,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 2,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 2,
+        "deliveredCounts": {},
+        "nextCargoId": 2,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 2,
+      "deliveries": [
+        {
+          "cargo": {
+            "id": 0,
+            "type": "alpha",
+          },
+          "outputPos": [
+            3,
+            0,
+          ],
+        },
+      ],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 2,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 1,
+              "type": "beta",
+            },
+            {
+              "id": 2,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 3,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 3,
+        "deliveredCounts": {
+          "alpha": 1,
+        },
+        "nextCargoId": 3,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 3,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 3,
+            "type": "beta",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 1,
+              "type": "beta",
+            },
+            {
+              "id": 3,
+              "type": "beta",
+            },
+          ],
+          "2,0": [
+            {
+              "id": 2,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 4,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 4,
+        "deliveredCounts": {
+          "alpha": 1,
+        },
+        "nextCargoId": 4,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 4,
+      "deliveries": [
+        {
+          "cargo": {
+            "id": 2,
+            "type": "alpha",
+          },
+          "outputPos": [
+            3,
+            0,
+          ],
+        },
+      ],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 4,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 1,
+              "type": "beta",
+            },
+            {
+              "id": 3,
+              "type": "beta",
+            },
+            {
+              "id": 4,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 5,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 5,
+        "deliveredCounts": {
+          "alpha": 2,
+        },
+        "nextCargoId": 5,
+        "tileState": {},
+      },
+    },
+  ],
+  "traceLen": 5,
+}
+`;
+
+exports[`snapshot scenarios > S4: single agent grabs from input, walks, drops on output 1`] = `
+{
+  "status": "victory",
+  "trace": [
+    {
+      "agentEvents": [
+        {
+          "agent": "a1",
+          "from": [
+            0,
+            0,
+          ],
+          "opExecuted": {
+            "kind": "GRAB",
+          },
+          "to": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "collisions": [],
+      "cycle": 0,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 0,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {
+          "a1": {
+            "carrying": {
+              "id": 0,
+              "type": "alpha",
+            },
+            "pathIndex": 0,
+            "pos": [
+              0,
+              0,
+            ],
+            "programIndex": 1,
+          },
+        },
+        "cargoOnTiles": {},
+        "cumulativeEmissions": 1,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 1,
+        "deliveredCounts": {},
+        "nextCargoId": 1,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [
+        {
+          "agent": "a1",
+          "from": [
+            0,
+            0,
+          ],
+          "opExecuted": {
+            "kind": "MOVE",
+          },
+          "to": [
+            1,
+            0,
+          ],
+        },
+      ],
+      "collisions": [],
+      "cycle": 1,
+      "deliveries": [],
+      "emissions": [],
+      "worldAfter": {
+        "agents": {
+          "a1": {
+            "carrying": {
+              "id": 0,
+              "type": "alpha",
+            },
+            "pathIndex": 1,
+            "pos": [
+              1,
+              0,
+            ],
+            "programIndex": 2,
+          },
+        },
+        "cargoOnTiles": {},
+        "cumulativeEmissions": 1,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 2,
+        "deliveredCounts": {},
+        "nextCargoId": 1,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [
+        {
+          "agent": "a1",
+          "from": [
+            1,
+            0,
+          ],
+          "opExecuted": {
+            "kind": "MOVE",
+          },
+          "to": [
+            2,
+            0,
+          ],
+        },
+      ],
+      "collisions": [],
+      "cycle": 2,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 1,
+            "type": "alpha",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {
+          "a1": {
+            "carrying": {
+              "id": 0,
+              "type": "alpha",
+            },
+            "pathIndex": 2,
+            "pos": [
+              2,
+              0,
+            ],
+            "programIndex": 3,
+          },
+        },
+        "cargoOnTiles": {
+          "0,0": [
+            {
+              "id": 1,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 2,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 3,
+        "deliveredCounts": {},
+        "nextCargoId": 2,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [
+        {
+          "agent": "a1",
+          "from": [
+            2,
+            0,
+          ],
+          "opExecuted": {
+            "kind": "DROP",
+          },
+          "to": [
+            2,
+            0,
+          ],
+        },
+      ],
+      "collisions": [],
+      "cycle": 3,
+      "deliveries": [
+        {
+          "cargo": {
+            "id": 0,
+            "type": "alpha",
+          },
+          "outputPos": [
+            2,
+            0,
+          ],
+        },
+      ],
+      "emissions": [],
+      "worldAfter": {
+        "agents": {
+          "a1": {
+            "carrying": null,
+            "pathIndex": 2,
+            "pos": [
+              2,
+              0,
+            ],
+            "programIndex": 4,
+          },
+        },
+        "cargoOnTiles": {
+          "0,0": [
+            {
+              "id": 1,
+              "type": "alpha",
+            },
+          ],
+        },
+        "cumulativeEmissions": 2,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 4,
+        "deliveredCounts": {
+          "alpha": 1,
+        },
+        "nextCargoId": 2,
+        "tileState": {},
+      },
+    },
+  ],
+  "traceLen": 4,
+}
+`;
+
+exports[`snapshot scenarios > S5: reactor combines two streams into one 1`] = `
+{
+  "status": "victory",
+  "trace": [
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 0,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 0,
+            "type": "a",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+        {
+          "cargo": {
+            "id": 1,
+            "type": "b",
+          },
+          "inputPos": [
+            0,
+            2,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 0,
+              "type": "a",
+            },
+          ],
+          "1,2": [
+            {
+              "id": 1,
+              "type": "b",
+            },
+          ],
+        },
+        "cumulativeEmissions": 2,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 1,
+        "deliveredCounts": {},
+        "nextCargoId": 2,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 1,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 2,
+            "type": "a",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+        {
+          "cargo": {
+            "id": 3,
+            "type": "b",
+          },
+          "inputPos": [
+            0,
+            2,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 2,
+              "type": "a",
+            },
+          ],
+          "1,1": [
+            {
+              "id": 0,
+              "type": "a",
+            },
+            {
+              "id": 1,
+              "type": "b",
+            },
+          ],
+          "1,2": [
+            {
+              "id": 3,
+              "type": "b",
+            },
+          ],
+        },
+        "cumulativeEmissions": 4,
+        "cumulativeReactorConsumed": 0,
+        "cumulativeReactorProduced": 0,
+        "cycle": 2,
+        "deliveredCounts": {},
+        "nextCargoId": 4,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 2,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 4,
+            "type": "a",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+        {
+          "cargo": {
+            "id": 5,
+            "type": "b",
+          },
+          "inputPos": [
+            0,
+            2,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 4,
+              "type": "a",
+            },
+          ],
+          "1,1": [
+            {
+              "id": 6,
+              "type": "c",
+            },
+            {
+              "id": 2,
+              "type": "a",
+            },
+            {
+              "id": 3,
+              "type": "b",
+            },
+          ],
+          "1,2": [
+            {
+              "id": 5,
+              "type": "b",
+            },
+          ],
+        },
+        "cumulativeEmissions": 6,
+        "cumulativeReactorConsumed": 2,
+        "cumulativeReactorProduced": 1,
+        "cycle": 3,
+        "deliveredCounts": {},
+        "nextCargoId": 7,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 3,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 7,
+            "type": "a",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+        {
+          "cargo": {
+            "id": 8,
+            "type": "b",
+          },
+          "inputPos": [
+            0,
+            2,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 7,
+              "type": "a",
+            },
+          ],
+          "1,1": [
+            {
+              "id": 9,
+              "type": "c",
+            },
+            {
+              "id": 4,
+              "type": "a",
+            },
+            {
+              "id": 5,
+              "type": "b",
+            },
+          ],
+          "1,2": [
+            {
+              "id": 8,
+              "type": "b",
+            },
+          ],
+          "2,1": [
+            {
+              "id": 6,
+              "type": "c",
+            },
+          ],
+        },
+        "cumulativeEmissions": 8,
+        "cumulativeReactorConsumed": 4,
+        "cumulativeReactorProduced": 2,
+        "cycle": 4,
+        "deliveredCounts": {},
+        "nextCargoId": 10,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 4,
+      "deliveries": [],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 10,
+            "type": "a",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+        {
+          "cargo": {
+            "id": 11,
+            "type": "b",
+          },
+          "inputPos": [
+            0,
+            2,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 10,
+              "type": "a",
+            },
+          ],
+          "1,1": [
+            {
+              "id": 12,
+              "type": "c",
+            },
+            {
+              "id": 7,
+              "type": "a",
+            },
+            {
+              "id": 8,
+              "type": "b",
+            },
+          ],
+          "1,2": [
+            {
+              "id": 11,
+              "type": "b",
+            },
+          ],
+          "2,1": [
+            {
+              "id": 9,
+              "type": "c",
+            },
+          ],
+          "3,1": [
+            {
+              "id": 6,
+              "type": "c",
+            },
+          ],
+        },
+        "cumulativeEmissions": 10,
+        "cumulativeReactorConsumed": 6,
+        "cumulativeReactorProduced": 3,
+        "cycle": 5,
+        "deliveredCounts": {},
+        "nextCargoId": 13,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 5,
+      "deliveries": [
+        {
+          "cargo": {
+            "id": 6,
+            "type": "c",
+          },
+          "outputPos": [
+            4,
+            1,
+          ],
+        },
+      ],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 13,
+            "type": "a",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+        {
+          "cargo": {
+            "id": 14,
+            "type": "b",
+          },
+          "inputPos": [
+            0,
+            2,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 13,
+              "type": "a",
+            },
+          ],
+          "1,1": [
+            {
+              "id": 15,
+              "type": "c",
+            },
+            {
+              "id": 10,
+              "type": "a",
+            },
+            {
+              "id": 11,
+              "type": "b",
+            },
+          ],
+          "1,2": [
+            {
+              "id": 14,
+              "type": "b",
+            },
+          ],
+          "2,1": [
+            {
+              "id": 12,
+              "type": "c",
+            },
+          ],
+          "3,1": [
+            {
+              "id": 9,
+              "type": "c",
+            },
+          ],
+        },
+        "cumulativeEmissions": 12,
+        "cumulativeReactorConsumed": 8,
+        "cumulativeReactorProduced": 4,
+        "cycle": 6,
+        "deliveredCounts": {
+          "c": 1,
+        },
+        "nextCargoId": 16,
+        "tileState": {},
+      },
+    },
+    {
+      "agentEvents": [],
+      "collisions": [],
+      "cycle": 6,
+      "deliveries": [
+        {
+          "cargo": {
+            "id": 9,
+            "type": "c",
+          },
+          "outputPos": [
+            4,
+            1,
+          ],
+        },
+      ],
+      "emissions": [
+        {
+          "cargo": {
+            "id": 16,
+            "type": "a",
+          },
+          "inputPos": [
+            0,
+            0,
+          ],
+        },
+        {
+          "cargo": {
+            "id": 17,
+            "type": "b",
+          },
+          "inputPos": [
+            0,
+            2,
+          ],
+        },
+      ],
+      "worldAfter": {
+        "agents": {},
+        "cargoOnTiles": {
+          "1,0": [
+            {
+              "id": 16,
+              "type": "a",
+            },
+          ],
+          "1,1": [
+            {
+              "id": 18,
+              "type": "c",
+            },
+            {
+              "id": 13,
+              "type": "a",
+            },
+            {
+              "id": 14,
+              "type": "b",
+            },
+          ],
+          "1,2": [
+            {
+              "id": 17,
+              "type": "b",
+            },
+          ],
+          "2,1": [
+            {
+              "id": 15,
+              "type": "c",
+            },
+          ],
+          "3,1": [
+            {
+              "id": 12,
+              "type": "c",
+            },
+          ],
+        },
+        "cumulativeEmissions": 14,
+        "cumulativeReactorConsumed": 10,
+        "cumulativeReactorProduced": 5,
+        "cycle": 7,
+        "deliveredCounts": {
+          "c": 2,
+        },
+        "nextCargoId": 19,
+        "tileState": {},
+      },
+    },
+  ],
+  "traceLen": 7,
+}
+`;

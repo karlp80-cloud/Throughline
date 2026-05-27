@@ -97,10 +97,7 @@ export function reactor(pos: Pos, facing: Direction, recipe: ReactorRecipe): Pla
 }
 
 // ─── Agents ────────────────────────────────────────────────────────
-export function agentState(
-  pos: Pos,
-  overrides: Partial<AgentState> = {},
-): AgentState {
+export function agentState(pos: Pos, overrides: Partial<AgentState> = {}): AgentState {
   return {
     pos,
     pathIndex: overrides.pathIndex ?? 0,

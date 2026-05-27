@@ -9,7 +9,15 @@
  */
 
 import { stepOnce } from './step';
-import type { AgentId, AgentState, CycleTrace, Puzzle, RunResult, Solution, WorldState } from './types';
+import type {
+  AgentId,
+  AgentState,
+  CycleTrace,
+  Puzzle,
+  RunResult,
+  Solution,
+  WorldState,
+} from './types';
 
 export function initialWorld(puzzle: Puzzle): WorldState {
   const agents: Record<AgentId, AgentState> = {};
