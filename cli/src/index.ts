@@ -39,7 +39,7 @@ Options:
   --time-budget-per-puzzle <s>  Solver budget per puzzle (default: 30)
   --gentle                    Bias toward easier puzzles
   --avoid-themes <a,b,c>      Themes to avoid (comma-separated)
-  --llm-timeout-ms <n>        Advanced: subprocess timeout (default: 60000)
+  --llm-timeout-ms <n>        Advanced: subprocess timeout (default: 180000)
   --verbose                   Stream subprocess output
   --help, -h                  Show this help
   --version, -v               Show version
@@ -109,10 +109,14 @@ function parseFlags(argv: readonly string[]): ParsedFlags | { help: true } | { v
     typeof values['time-budget-per-puzzle'] === 'string'
       ? parseIntInRange('time-budget-per-puzzle', values['time-budget-per-puzzle'], 1, 300)
       : 30;
+  // Default kept in sync with claudeSpawn.DEFAULT_TIMEOUT_MS (180s).
+  // The 60s default was too tight under Tauri-launched runs once the
+  // CLI started getting realistic full-manifest prompts; bumping here
+  // because the argv layer overrides claudeSpawn's constant.
   const llmTimeoutMs =
     typeof values['llm-timeout-ms'] === 'string'
       ? parseIntInRange('llm-timeout-ms', values['llm-timeout-ms'], 1_000, 600_000)
-      : 60_000;
+      : 180_000;
   const avoidThemes =
     typeof values['avoid-themes'] === 'string' && values['avoid-themes'].length > 0
       ? values['avoid-themes']

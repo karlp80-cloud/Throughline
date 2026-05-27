@@ -227,6 +227,12 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
       lastFeedback = null;
       break;
     }
+    if (process.env['THROUGHLINE_TRACE_SPAWN'] === '1') {
+      process.stderr.write(
+        `[solver-trace] manifest attempt ${manifestAttempts} unsolvable: ` +
+          `puzzleId=${solveResult.unsolvablePuzzleId} bestProgress=${solveResult.bestProgress}\n`,
+      );
+    }
     lastFeedback = {
       kind: 'solver',
       puzzleId: solveResult.unsolvablePuzzleId,
