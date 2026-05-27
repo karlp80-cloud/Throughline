@@ -36,9 +36,11 @@ Phase 10 reviewer verdict: **PASS-WITH-NOTES**; full report in [docs/reviews/pha
 - `cli/src/promptBuilder.ts` duplicate `CANDIDATE_PATHS` entry removed.
 - `cli/src/writer.ts` dead `'traversal'` `WriterPathErrorKind` member removed.
 
-**Pending:** Phase 9 human-playtester review (carried forward); a real `claude -p` smoke run (`RUN_LIVE_LLM=1 npx vitest run cli/integration/`) before tagging release.
+Live `claude -p` smoke run passed (2026-05-27, 21.8 s). Real subprocess → valid Zod-parsed manifest → solver-verified solvable. Re-run via `RUN_LIVE_LLM=1 npm run test:cli:live`.
 
-**Next:** Phase 11 — E2E procgen integration (Tauri side spawns `throughline-gen`, surfaces progress, loads the produced manifest into the game).
+**Pending:** Phase 9 human-playtester review (carried forward).
+
+**Next:** Phase 11 — E2E procgen integration (Tauri side spawns `throughline-gen`, surfaces progress, loads the produced manifest into the game). Moderate cycle.
 
 When a phase completes, update this section to point at the next phase.
 
