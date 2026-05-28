@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            bundle-glob: 'src-tauri/target/release/bundle/{deb,appimage}/*'
+          - os: windows-latest
+            bundle-glob: 'src-tauri/target/release/bundle/{msi,nsis}/*'
+          - os: macos-latest
+            bundle-glob: 'src-tauri/target/release/bundle/dmg/*'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+
+      - name: Install Tauri Linux prereqs
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CLI
+        run: npm run build:cli
+
+      - name: Build Tauri bundle
+        run: npx tauri build
+
+      - name: Upload bundles to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.bundle-glob }}
+          fail_on_unmatched_files: false
+
+# Note: this workflow ships UNSIGNED bundles for v0.1.0. Code signing
+# (Apple notarization, Windows Authenticode) is out of scope for the
+# initial release per the Phase 12 spec; revisit before v0.2 if
+# distributing more widely. Users will see SmartScreen / Gatekeeper
+# warnings on first run.
