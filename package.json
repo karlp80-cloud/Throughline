@@ -14,7 +14,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:web": "npm run build",
     "build:cli": "node cli/build.mjs",
+    "build:desktop": "npm run build:cli && tauri build",
+    "build:desktop:debug": "npm run build:cli && tauri build --debug",
     "preview": "vite preview --port 4173",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
