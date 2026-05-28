@@ -46,9 +46,11 @@ Phase 12 inherits one carryover: validate `tauri.conf.json#bundle.resources` aga
 
 Phase 9 playtest closed (single-tester pass, log at [docs/playtest/tutorial-karlp.md](docs/playtest/tutorial-karlp.md)).
 
-**Pending:** Phase 11 manual checkpoint — hit `npm run tauri dev` on a clean profile, play through one generated campaign 30+ minutes, file findings in `docs/playtest/procgen-first-pass.md`.
+Phase 11 manual checkpoint closed: pipeline pass at 3×2 = 6 puzzles. Six issues surfaced and were fixed inline during the playtest (timeout layering, Claude-Code parent-session env strip, `WaitOutcome::Timeout` stderr preservation, etc.). Log at [docs/playtest/procgen-first-pass.md](docs/playtest/procgen-first-pass.md). One quality limitation deferred to a post-Phase-12 polish round: the 12-puzzle default doesn't reliably succeed because cumulative work hits the 15-min Rust wall at ~75 s per puzzle.
 
-**Next:** Phase 12 — Packaging.
+**Pending:** none for Phase 11.
+
+**Next:** Phase 12 — Packaging. Coder-only cycle. Inherits Phase 11's `bundle.resources` validation carryover.
 
 When a phase completes, update this section to point at the next phase.
 
