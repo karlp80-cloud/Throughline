@@ -13,6 +13,7 @@ export default tseslint.config(
       'coverage/**',
       'cli/test-fixtures/**',
       'src-tauri/target/**',
+      'msi-extract/**',
     ],
   },
   ...tseslint.configs.recommended,

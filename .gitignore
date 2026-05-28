@@ -30,6 +30,8 @@ Thumbs.db
 src-tauri/target/
 # Tauri-generated capability schemas (regenerated at build time).
 src-tauri/gen/
+# Ad-hoc MSI / bundle extraction during local packaging verification.
+msi-extract/
 
 # Local Claude Code state
 .claude/settings.local.json
