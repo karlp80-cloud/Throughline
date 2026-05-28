@@ -13,7 +13,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -45,6 +45,13 @@ function run(cmd, args, opts = {}) {
 const nodeExe = process.execPath;
 const tscJs = join(repoRoot, 'node_modules', 'typescript', 'lib', 'tsc.js');
 const esbuildJs = join(repoRoot, 'node_modules', 'esbuild', 'bin', 'esbuild');
+
+// 0. Clean. We only emit `dist-cli/throughline-gen.mjs` +
+//    `dist-cli/prompts/system.md`. Any pre-existing tsc emit (from a
+//    misfired `tsc -p cli/tsconfig.json` without `--noEmit`) would
+//    bloat `bundle.resources` because tauri.conf.json globs
+//    `../dist-cli/**/*`. Remove the directory before rebuild.
+rmSync(join(repoRoot, 'dist-cli'), { recursive: true, force: true });
 
 // 1. Type-check.
 run(nodeExe, [tscJs, '-p', 'cli/tsconfig.json', '--noEmit']);
