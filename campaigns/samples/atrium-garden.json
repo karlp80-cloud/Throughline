@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "seed": "atrium-garden",
+  "theme": {
+    "name": "Atrium Garden",
+    "setting_summary": "A glass conservatory under low winter sun. The head gardener routes warm air through ducts, pollinators across the beds, and irrigation along the channels — a slow choreography that keeps everything alive past the cold months.",
+    "palette": {
+      "bg": "#1c2a1c",
+      "surface": "#283828",
+      "fg": "#f0e8c8",
+      "muted": "#7a8a6a",
+      "accent": "#a8c060",
+      "success": "#90c890",
+      "danger": "#c87060"
+    },
+    "glyphs": {},
+    "vocabulary": {
+      "cargo": "seedling",
+      "agent": "gardener",
+      "cycle": "tide"
+    }
+  },
+  "acts": [
+    {
+      "id": "winter-planting",
+      "title": "Winter Planting",
+      "intro_text": "Light through frosted panes. Three trays of seedlings to settle, water to route, and a gardener who's been at this long enough to know the channels by heart.",
+      "outro_text": "By dusk the trays sit in their rows, leaves angled to whatever sun the season offers. The kettle's on. The atrium hums.",
+      "required_completions": 3,
+      "puzzles": [
+        {
+          "id": "p1_first_bed",
+          "title": "First Bed",
+          "briefing": "Gardener: \"Seedlings come off the propagation bench, settle them into the planter at the far end. Just a channel, that's all we need.\"",
+          "grid": { "w": 5, "h": 1 },
+          "inputs": [{ "pos": [0, 0], "emits": ["seedling"], "rate": 1 }],
+          "outputs": [{ "pos": [4, 0], "required": [{ "type": "seedling", "count": 3 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 8, "max_cycles": 30 },
+          "optional_challenges": [
+            { "id": "opt_lean", "label": "Use ≤3 tiles", "rule": "tiles_used <= 3" }
+          ]
+        },
+        {
+          "id": "p2_dividing_beds",
+          "title": "Dividing the Beds",
+          "briefing": "Gardener: \"The shipment alternates: chamomile, then thyme, then chamomile again. One bed each side of the path. Splitter at the junction.\"",
+          "grid": { "w": 5, "h": 3 },
+          "inputs": [{ "pos": [0, 1], "emits": ["seedling"], "rate": 1 }],
+          "outputs": [
+            { "pos": [4, 0], "required": [{ "type": "seedling", "count": 2 }] },
+            { "pos": [4, 2], "required": [{ "type": "seedling", "count": 2 }] }
+          ],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "splitter"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 12, "max_cycles": 40 },
+          "optional_challenges": []
+        },
+        {
+          "id": "p3_the_grafting_table",
+          "title": "The Grafting Table",
+          "briefing": "Gardener: \"Rootstock from one bench, scion from another. The grafting table joins them into something the catalogue's never seen. Reactor at the center; route the rootstock and scion in, route the graft out.\"",
+          "grid": { "w": 7, "h": 4 },
+          "inputs": [
+            { "pos": [0, 1], "emits": ["rootstock"], "rate": 2 },
+            { "pos": [0, 3], "emits": ["scion"], "rate": 2 }
+          ],
+          "outputs": [{ "pos": [6, 2], "required": [{ "type": "graft", "count": 2 }] }],
+          "agents": [{ "id": "g1", "start_pos": [3, 0], "max_ops": 4 }],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "reactor"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 16, "max_cycles": 60 },
+          "reactor_recipes": [{ "inputs": ["rootstock", "scion"], "output": "graft" }],
+          "optional_challenges": [
+            { "id": "opt_lean", "label": "Use ≤12 tiles", "rule": "tiles_used <= 12" }
+          ]
+        }
+      ]
+    }
+  ],
+  "ending": {
+    "good": "The atrium settles into its winter rhythm. Leaves you'd given up on push out new shoots. The work asks for less of you now — the channels know where to go.",
+    "neutral": "The work is done, for now."
+  }
+}

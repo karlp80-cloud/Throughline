@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "seed": "lighthouse-keepers",
+  "theme": {
+    "name": "Lighthouse Keepers",
+    "setting_summary": "A windswept point. Three keepers split the night shift between them, routing oil from the cellar drums to the great lamp above.",
+    "palette": {
+      "bg": "#0d1b2a",
+      "surface": "#1b263b",
+      "fg": "#e0e1dd",
+      "muted": "#6f8aa1",
+      "accent": "#f4a261",
+      "success": "#90be6d",
+      "danger": "#e76f51"
+    },
+    "glyphs": {},
+    "vocabulary": {
+      "cargo": "oil",
+      "agent": "keeper",
+      "cycle": "watch"
+    }
+  },
+  "acts": [
+    {
+      "id": "the-night-shift",
+      "title": "The Night Shift",
+      "intro_text": "Wind off the headland. The lamp must burn before the first hull rounds the point. Lay the lines from the cellar to the wick.",
+      "outro_text": "The beam swings out across the water. Far off, a fishing boat answers with a lantern flick. The night is yours.",
+      "required_completions": 3,
+      "puzzles": [
+        {
+          "id": "p1_first_light",
+          "title": "First Light",
+          "briefing": "Keeper: \"Oil drum on the west wall, wick on the east. Run a line between them. The cellar's narrow — three cells across.\"",
+          "grid": { "w": 5, "h": 1 },
+          "inputs": [{ "pos": [0, 0], "emits": ["oil"], "rate": 1 }],
+          "outputs": [{ "pos": [4, 0], "required": [{ "type": "oil", "count": 3 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 8, "max_cycles": 30 },
+          "optional_challenges": [
+            { "id": "opt_lean", "label": "Use ≤3 tiles", "rule": "tiles_used <= 3" }
+          ]
+        },
+        {
+          "id": "p2_two_wicks",
+          "title": "Two Wicks",
+          "briefing": "Keeper: \"The reserve lamp burns on the south rail; the main on the north. The pump alternates between them. One splitter, two outputs.\"",
+          "grid": { "w": 5, "h": 3 },
+          "inputs": [{ "pos": [0, 1], "emits": ["oil"], "rate": 1 }],
+          "outputs": [
+            { "pos": [4, 0], "required": [{ "type": "oil", "count": 2 }] },
+            { "pos": [4, 2], "required": [{ "type": "oil", "count": 2 }] }
+          ],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "splitter"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 12, "max_cycles": 40 },
+          "optional_challenges": []
+        },
+        {
+          "id": "p3_the_filter_grate",
+          "title": "The Filter Grate",
+          "briefing": "Keeper: \"Cellar oil's mixed with brine on a wet night. Filter the brine out before it reaches the wick. Brine ruins the burn.\"",
+          "grid": { "w": 6, "h": 3 },
+          "inputs": [{ "pos": [0, 1], "emits": ["oil", "brine"], "rate": 1 }],
+          "outputs": [{ "pos": [5, 1], "required": [{ "type": "oil", "count": 3 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "filter"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 10, "max_cycles": 50 },
+          "filter_types": ["oil"],
+          "optional_challenges": [
+            { "id": "opt_lean", "label": "Use ≤5 tiles", "rule": "tiles_used <= 5" }
+          ]
+        }
+      ]
+    }
+  ],
+  "ending": {
+    "good": "Three nights kept, three lamps lit. The fog rolls in but the beam keeps cutting, and you keep the watch.",
+    "neutral": "The work is done, for now."
+  }
+}

@@ -39,7 +39,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["../bin/throughline-gen", "../dist-cli/**/*"],
+    "resources": ["../bin/throughline-gen", "../dist-cli/**/*", "../campaigns/samples/**/*.json"],
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }

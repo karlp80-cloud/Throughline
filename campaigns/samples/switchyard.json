@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "seed": "switchyard",
+  "theme": {
+    "name": "Switchyard",
+    "setting_summary": "A freight yard at first frost. Couplings clank, switchmen wave, and the dispatcher reads the bills before the cars are sorted onto the right siding.",
+    "palette": {
+      "bg": "#1c1c1c",
+      "surface": "#2a2a2a",
+      "fg": "#e8e2d0",
+      "muted": "#7a7468",
+      "accent": "#d4a017",
+      "success": "#8aa982",
+      "danger": "#c14242"
+    },
+    "glyphs": {},
+    "vocabulary": {
+      "cargo": "car",
+      "agent": "switchman",
+      "cycle": "shift"
+    }
+  },
+  "acts": [
+    {
+      "id": "morning-shift",
+      "title": "Morning Shift",
+      "intro_text": "Cold air, hot coffee. The dispatcher slides a clipboard across. Sort the cars by bill of lading before the southbound express comes through.",
+      "outro_text": "The express clears the yard limit, on time. Up north, a yardmaster on another line marks your number down for next month's run.",
+      "required_completions": 3,
+      "puzzles": [
+        {
+          "id": "p1_the_lead",
+          "title": "The Lead Track",
+          "briefing": "Dispatcher: \"Two cars off the yard lead, both bound for the spur. Run a track between them.\"",
+          "grid": { "w": 4, "h": 1 },
+          "inputs": [{ "pos": [0, 0], "emits": ["boxcar"], "rate": 1 }],
+          "outputs": [{ "pos": [3, 0], "required": [{ "type": "boxcar", "count": 2 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 6, "max_cycles": 20 },
+          "optional_challenges": [
+            { "id": "opt_lean", "label": "Use ≤2 tiles", "rule": "tiles_used <= 2" }
+          ]
+        },
+        {
+          "id": "p2_classification",
+          "title": "Classification",
+          "briefing": "Dispatcher: \"Mixed train — boxcars and gondolas alternating. Only the boxcars are bound for the elevator spur. Cull the rest.\"",
+          "grid": { "w": 6, "h": 3 },
+          "inputs": [{ "pos": [0, 1], "emits": ["boxcar", "gondola"], "rate": 1 }],
+          "outputs": [{ "pos": [5, 1], "required": [{ "type": "boxcar", "count": 3 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "filter"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 10, "max_cycles": 60 },
+          "filter_types": ["boxcar"],
+          "optional_challenges": []
+        },
+        {
+          "id": "p3_handheld_coupling",
+          "title": "Handheld Coupling",
+          "briefing": "Dispatcher: \"The siding's blocked — no room for tracks. Walk a switchman down the lead, have them couple at the head and uncouple at the tail.\"",
+          "grid": { "w": 4, "h": 1 },
+          "inputs": [{ "pos": [0, 0], "emits": ["boxcar"], "rate": 1 }],
+          "outputs": [{ "pos": [3, 0], "required": [{ "type": "boxcar", "count": 2 }] }],
+          "agents": [{ "id": "swm", "start_pos": [0, 0], "max_ops": 10 }],
+          "obstacles": [],
+          "available_tiles": ["conveyor"],
+          "available_ops": ["MOVE", "GRAB", "DROP", "WAIT"],
+          "constraints": { "max_tiles": 0, "max_cycles": 40 },
+          "optional_challenges": [
+            { "id": "opt_tight", "label": "Solve in <20 watches", "rule": "cycles < 20" }
+          ]
+        },
+        {
+          "id": "p4_the_yard",
+          "title": "The Yard",
+          "briefing": "Dispatcher: \"Two leads coming in — east and west. Both need to merge onto the main, southbound, to the receiving track.\"",
+          "grid": { "w": 6, "h": 3 },
+          "inputs": [
+            { "pos": [0, 0], "emits": ["boxcar"], "rate": 1 },
+            { "pos": [0, 2], "emits": ["boxcar"], "rate": 1 }
+          ],
+          "outputs": [{ "pos": [5, 1], "required": [{ "type": "boxcar", "count": 4 }] }],
+          "agents": [],
+          "obstacles": [],
+          "available_tiles": ["conveyor", "merger"],
+          "available_ops": ["MOVE", "WAIT"],
+          "constraints": { "max_tiles": 14, "max_cycles": 40 },
+          "optional_challenges": [
+            { "id": "opt_lean", "label": "Use ≤10 tiles", "rule": "tiles_used <= 10" }
+          ]
+        }
+      ]
+    }
+  ],
+  "ending": {
+    "good": "Cars sorted, schedules met, the freight rolls on. You hang the lamp back on its peg and head for the bunkhouse.",
+    "neutral": "The work is done, for now."
+  }
+}
