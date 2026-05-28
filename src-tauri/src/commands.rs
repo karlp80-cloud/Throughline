@@ -97,6 +97,12 @@ impl ProcgenError {
         self.cli_stderr = Some(stderr);
         self
     }
+    /// Attach stderr without an exit code. Used by the Timeout path,
+    /// where the child was killed before reporting an exit status.
+    fn with_stderr(mut self, stderr: String) -> Self {
+        self.cli_stderr = Some(stderr);
+        self
+    }
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -376,11 +382,18 @@ pub async fn generate_campaign(
                 "generation cancelled",
             ));
         }
-        WaitOutcome::Timeout => {
+        WaitOutcome::Timeout { stderr: stderr_bytes } => {
+            // Preserve whatever stderr the CLI had written before the
+            // wall fired. Without this, the error modal shows the
+            // generic timeout copy with no trace of WHERE the CLI was
+            // spending its time — invisibility makes the next
+            // diagnostic pass impossible. Phase 11 manual-playtest fix.
+            let stderr_sanitized = sanitize_stderr(&stderr_bytes);
             return Err(ProcgenError::new(
                 ProcgenErrorKind::Timeout,
                 "generation exceeded the wall-clock timeout",
-            ));
+            )
+            .with_stderr(stderr_sanitized));
         }
         WaitOutcome::IoError(msg) => {
             return Err(ProcgenError::new(ProcgenErrorKind::InternalError, msg));
@@ -421,7 +434,12 @@ enum WaitOutcome {
         stderr: Vec<u8>,
     },
     Cancelled,
-    Timeout,
+    /// Carries whatever stderr the CLI had accumulated before the wall
+    /// fired. Without this, the user sees an empty timeout modal — no
+    /// way to diagnose what the CLI was doing for those N minutes.
+    Timeout {
+        stderr: Vec<u8>,
+    },
     IoError(String),
 }
 
@@ -496,13 +514,25 @@ async fn wait_or_timeout(
             return WaitOutcome::Cancelled;
         }
         Err(_) => {
-            // Timeout. Best-effort kill via the retained Arc.
+            // Timeout. Best-effort kill via the retained Arc, then drain
+            // stderr so the modal can show what the CLI was doing. The
+            // drain itself is bounded (5 s) in case stderr_task is wedged
+            // — partial output is better than none, and "none" is the
+            // current buggy behavior we're fixing.
             let mut guard = child_slot.lock().await;
             if let Some(child) = guard.as_mut() {
                 let _ = child.start_kill();
             }
             *guard = None;
-            return WaitOutcome::Timeout;
+            drop(guard);
+            let stderr_bytes =
+                match tokio::time::timeout(Duration::from_secs(5), stderr_task).await {
+                    Ok(Ok(bytes)) => bytes,
+                    Ok(Err(_)) | Err(_) => Vec::new(),
+                };
+            return WaitOutcome::Timeout {
+                stderr: stderr_bytes,
+            };
         }
     };
 
@@ -699,5 +729,67 @@ mod tests {
                 panic!("child exited within 500ms; test setup broken");
             }
         }
+    }
+
+    /// Phase 11 manual-playtest regression: when the wall fires, the
+    /// CLI's stderr (which contains our spawn-trace and solver-trace
+    /// lines) must reach the error modal. Previously the Timeout
+    /// branch returned immediately, dropping stderr_task and losing
+    /// every diagnostic line the CLI had written.
+    ///
+    /// This test exercises the same drain pattern wait_or_timeout
+    /// uses: spawn a child that writes to stderr and then sleeps,
+    /// race against a short tokio timeout, drain the stderr stream,
+    /// and assert the bytes the child wrote BEFORE the kill made it
+    /// out alive.
+    #[tokio::test]
+    async fn timeout_preserves_stderr() {
+        use tokio::io::AsyncReadExt;
+        let mut cmd = Command::new("node");
+        cmd.args([
+            "-e",
+            "process.stderr.write('hello-from-cli\\n'); setTimeout(() => process.exit(0), 30000)",
+        ]);
+        cmd.stdin(Stdio::null());
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::piped());
+        cmd.kill_on_drop(true);
+        let Ok(mut child) = cmd.spawn() else {
+            eprintln!("timeout_preserves_stderr: skipped (node not on PATH)");
+            return;
+        };
+        let stderr_handle = child.stderr.take().expect("piped stderr");
+        let drain_task = tokio::spawn(async move {
+            let mut buf = Vec::new();
+            let mut s = stderr_handle;
+            let mut chunk = [0u8; 1024];
+            loop {
+                match s.read(&mut chunk).await {
+                    Ok(0) => break,
+                    Ok(n) => buf.extend_from_slice(&chunk[..n]),
+                    Err(_) => break,
+                }
+            }
+            buf
+        });
+        // Give the child a moment to write its stderr line before we
+        // start racing. 200 ms is generous on any CI box for a single
+        // node -e startup + one write().
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        let wait_fut = child.wait();
+        let result = tokio::time::timeout(Duration::from_millis(500), wait_fut).await;
+        assert!(result.is_err(), "expected timeout (child sleeps 30s)");
+        child.start_kill().expect("start_kill");
+        // Drain stderr — same 5s bound the production code uses.
+        let bytes = match tokio::time::timeout(Duration::from_secs(5), drain_task).await {
+            Ok(Ok(b)) => b,
+            _ => Vec::new(),
+        };
+        let text = String::from_utf8_lossy(&bytes);
+        assert!(
+            text.contains("hello-from-cli"),
+            "stderr drained on timeout should contain the child's pre-kill write; got: {text:?}"
+        );
+        let _ = child.wait().await;
     }
 }
