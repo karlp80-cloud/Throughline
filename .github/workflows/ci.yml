@@ -7,8 +7,14 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    name: build-and-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -27,11 +33,20 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Typecheck (game)
+        run: npx tsc --noEmit
+
+      - name: Typecheck (CLI)
+        run: npx tsc -p cli/tsconfig.json --noEmit
+
       - name: Unit tests
         run: npm run test:unit
 
-      - name: Build
+      - name: Build (web)
         run: npm run build
+
+      - name: Build (CLI)
+        run: npm run build:cli
 
       - name: E2E tests
         run: npm run test:e2e
@@ -40,6 +55,13 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 7
+
+# Note: Rust-side tests (cargo test --manifest-path src-tauri/Cargo.toml)
+# are NOT run in CI. They require rustup + Tauri 2.x system prereqs
+# (MSVC Build Tools on Windows; WebKitGTK, libsoup, etc. on Linux),
+# which is heavyweight setup for marginal CI benefit when the same
+# tests run on the developer's box. The release.yml workflow does
+# pull in the Rust toolchain because it actually builds bundles.
