@@ -1,10 +1,10 @@
 [package]
-name = "app"
+name = "throughline"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+description = "Throughline — Zachtronic-style flow-routing puzzle game with LLM-generated campaigns."
+authors = ["Throughline contributors"]
+license = "MIT"
+repository = "https://github.com/karlp80-cloud/Throughline"
 edition = "2021"
 rust-version = "1.77.2"
 
